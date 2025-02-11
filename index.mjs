@@ -3,7 +3,7 @@ import dotenv  from 'dotenv'
 
 dotenv.config()
 
-const port = process.env.PORT || 1111
+const port = process.env.APP_PORT || 1111
 
 const app = express()
 
