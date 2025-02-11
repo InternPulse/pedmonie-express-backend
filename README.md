@@ -1,8 +1,8 @@
 # Pedmonie Express Backend API
 
 ## Project Overview
-
-The Pedmonie Django Backend API is a Django-based analytics service designed to provide insights into critical business areas, including:
+ 
+The Pedmonie Express Backend API is a Django-based analytics service designed to provide insights into critical business areas, including:
 
 - **Sales Performance Analytics**  
   - **Revenue Trends:** Track overall sales performance over time (e.g., daily, weekly, monthly, quarterly). Show revenue growth or decline trends to help vendors understand performance.  
