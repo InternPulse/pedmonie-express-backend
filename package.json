@@ -1,0 +1,21 @@
+{
+  "name": "pedmonie-express-backend",
+  "version": "1.0.0",
+  "description": "The Pedmonie Express Backend API is a Django-based analytics service designed to provide insights into critical business areas, including:",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
