@@ -14,4 +14,4 @@ app.listen(port, ()=>{
 })
 
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(PaypalRouter)
+app.use('/api/v1', PaypalRouter)

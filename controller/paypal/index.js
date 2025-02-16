@@ -1,19 +1,22 @@
-const { createOrder, captureOrder }= require('../../services/paypal/index.js')
+const { createOrder, captureOrder, getOrder, conversionsOfCurrencies }= require('../../services/paypal/index.js')
 const { validateOrder } = require('../../validations/paypal/index.js')
 const {sequelize} = require('../../models/index.js')
 
-
+const { messages } = require('../../messages/index.js')
 //This is how to import the models from the models folder
-const Merchant = require('../../models/merchant.js')(sequelize, require('sequelize').DataTypes);
-////////////////////////////////
+
+//Models
+const Merchant = require('../../models/merchant.js')(sequelize, require('sequelize').DataTypes)
+const Order = require('../../models/order.js')(sequelize, require('sequelize').DataTypes)
+const Transaction = require('../../models/transaction.js')(sequelize, require('sequelize').DataTypes)
+const Wallet = require('../../models/wallet.js')(sequelize, require('sequelize').DataTypes)
 
 
-
+//This function is responsible for initializing the payment transaction
 const createOrderController = async (req, res) => {
-    // Implement logic to create an order using the access token
 
     try {
-        const { currency_code, value, email } = req.body
+        const { currency_code, value, merchant_id } = req.body
         const { error } = validateOrder(req.body)
 
         if(error != undefined){
@@ -23,47 +26,277 @@ const createOrderController = async (req, res) => {
             })
         }
 
-        const data = await createOrder(currency_code, value)
+        //This database call will be updated to find the merchant with the merchant_id
+        const MerchantData = await Merchant.findOne({
+            where: {
+                email: 'murewa.abass@gmail.com',
+            }
+        })
+
+        //An order is created in the database to keep track of the customers activity
+        const order =await Order.create({
+            merchant_id: MerchantData.merchant_id,
+            gateway_name: 'PAYPAL',
+            order_status: 'pending',
+            amount: value,
+            currency: currency_code,
+        })
+
+        if(!order){
+            return res.status(404).json({
+                status: false,
+                message: messages.ORDER_FAILED,
+            })
+        }
+
+        const orderID = order.order_id
+
+        //This function calls the paypal API to initiate the payment
+        const data = await createOrder(currency_code, value, orderID )
+
         if (!data){
             return res.status(404).json({
                 status: false,
-                message: 'Failed to create order',
+                message: messages.INITIALIZED_FAILED,
             })
         }
 
         res.status(201).json({
             status: true,
-            message: 'Order created successfully',
-            data: data,
+            message: messages.ORDER_INITIALIZED_SUCCESS,
+            data: {order_id: order.order_id, ...data},
+
         })
     } catch (error) {
         res.status(500).json({
             status: false,
-            message: 'Internal Server Error',
+            message: messages.INTERNAL_SERVER_ERROR,
             error: error.message,
         })
     }
 }
 
+//This function is responsible for completing the payment transaction
 const completeOrder = async (req, res) => {
 
+    //A DB transaction is initiated
+    const t = await sequelize.transaction();
+
     try {
+
+        //Token is the ID of the transaction which was returned when the payment was initialized
         const { token } = req.query
 
         if(!token){
             res.status(403).json({
                 status: false,
-                message: 'Token is required',
+                message: messages.TOKEN_REQUIRED,
             })
         }
 
-        await captureOrder(token)
+        //This function checks the database to confirm if the ID of the transaction hasn't been captured in a previous transaction
+        const checkIfTokenExists = await Transaction.findOne({
+            where: {
+                gateway_transaction_identifier: token,
+            },
+        })
+
+        if(checkIfTokenExists != null){
+            return res.status(409).json({
+                status: false,
+                message: messages.ORDER_PREV_CAPTURED,
+            })
+        }
+
+        //This function captures the payment in the paypal API
+        const orderCapturedResponse = await captureOrder(token)
+
+
+        //This functions gets the order captured from the paypal API
+        const orders = await getOrder(token)
+
+        if(orders.status !== 'COMPLETED'){
+            return res.status(400).json({
+                status: false,
+                message: messages.INCOMPLETE_ORDER
+            })
+        }
+
+        //Getting the ID of th database order that was stored during the initialization of the transaction
+        const order_id = orders.purchase_units[0].custom_id
+        
+        
+        //This functions checks the response from captureOrder functions for errors and returns
+        if( !orderCapturedResponse.status ){
+
+            //this updates the order database to status of failed
+            await Order.update(
+                {order_status: 'failed'}, {
+                    where: {
+                        order_id: order_id,
+                    },
+                    transaction: t,
+            });
+
+            //Returning various messages depending on the response.name
+            switch(orderCapturedResponse.name){
+                case 'NOT_AUTHORIZED':
+                    return res.status(403).json({
+                        status: false,
+                        message: orderCapturedResponse.message,
+                    })
+                case 'RESOURCE_NOT_FOUND':
+                    return res.status(404).json({
+                        status: false,
+                        message: orderCapturedResponse.message,
+                    })
+                case 'UNPROCESSABLE_ENTITY':
+                    return res.status(422).json({
+                        status: false,
+                        message: orderCapturedResponse.message,
+                    })
+                default:
+                    return res.status(500).json({
+                        status: false,
+                        message: messages.INTERNAL_SERVER_ERROR,
+                    })
+                }
+            }
+        //get the amount the customer paid
+        const customer_paid = orders.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.value
+        
+        //get the currency the customer used in paying
+        const customer_paid_currency = orders.purchase_units[0].payments.captures[0].seller_receivable_breakdown.gross_amount.currency_code
+        
+        //get the amount the seller received from paypal
+        const seller_received = orders.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.value
+        
+        //get the currency the seller received in
+        const seller_received_currency = orders.purchase_units[0].payments.captures[0].seller_receivable_breakdown.net_amount.currency_code
+        
+        //this function gets the Order record from the DB
+        const merchant_order = await Order.findOne({
+            where: {
+                order_id: order_id,
+            },
+        })
+
+
+        //this function gets the merchant's wallet
+        const getWallet =await Wallet.findOne({
+            where: {
+                merchant_id: merchant_order.merchant_id,
+            },
+        })
+        if(!getWallet){
+            return res.status(404).json({
+                status: false,
+                message: messages.WALLET_NOT_FOUND,
+            })
+        }
+        //get the different conversions for various currency codes using the merchant's wallet currency as the base currency
+        const convert = await conversionsOfCurrencies(getWallet.currency)
+
+        if(convert == null){
+            res.status(404).json({
+                status: false,
+                message: messages.ERROR_OCCURED
+            })
+        }
+
+        //this converts the amount the customer paid to the wallet's currency
+        const AmountSendToWallet = (seller_received/convert[seller_received_currency]).toFixed(2)
+        console.log('amount', AmountSendToWallet)
+        
+
+        
+        await Order.update(
+            {order_status: 'successful'}, {
+            where: {
+                order_id: order_id,
+            },
+            transaction: t,
+        });
+        
+        const transact = await Transaction.create({
+            order_id,
+            merchant_id: merchant_order.merchant_id,
+            gateway_name: 'PAYPAL',
+            gateway_transaction_identifier: token,
+            payment_channel: 'CARD',
+            amount: customer_paid,
+            currency: customer_paid_currency,
+            status:'successful'
+        },
+    {transaction: t})
+
+        
+
+        const incrementAmount = Number(getWallet.amount) + Number(AmountSendToWallet)
+        await getWallet.update({ amount: incrementAmount}, {transaction: t })        
 
         res.status(200).json({
             status: true,
-            message: 'Order captured successfully',
+            message: messages.ORDER_CAPTURED_SUCCESS,
+            data: {
+                transact,
+                getWallet
+            }
         })
 
+        await t.commit();
+
+    } catch (error) {
+
+        
+        res.status(500).json({
+            status: false,
+            message: error.message,
+        })
+        await t.rollback();
+    }
+}
+
+const cancelOrder = async (req, res) => {
+
+    try {
+        const { token } = req.query
+
+        if(!token){
+            return res.status(403).json({
+                status: false,
+                message: messages.TOKEN_REQUIRED,
+            })
+        }
+
+        //get the cancelled order from paypal API
+        const orders = await getOrder(token)
+
+        if(orders == null || orders.status !== 'COMPLETED'){
+            return res.status(400).json({
+                status: false,
+                message: messages.INCOMPLETE_ORDER
+            })
+        }
+
+        //get the order_id from of the database that was stored as a custom_id
+        const order_id = orders.purchase_units[0].custom_id
+
+        //update the status of the order in the database to failed
+        await Order.update(
+            {
+            order_status: 'failed'
+            },
+            {
+            where: {
+                order_id: order_id,
+            }
+        })
+
+        res.status(200).json({
+            status: true,
+            message: messages.ORDER_CANCELLED,
+        })
     } catch (error) {
         res.status(500).json({
             status: false,
@@ -72,9 +305,8 @@ const completeOrder = async (req, res) => {
     }
 }
 
-
-
 module.exports = {
     createOrderController,
     completeOrder,
+    cancelOrder
 }
