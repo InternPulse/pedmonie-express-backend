@@ -1,11 +1,13 @@
 const { v4:uuidv4 }= require('uuid');
+const {messages} = require('../../messages')
+
 
 const getAccessToken = async ()=>{
 
     const clientId = process.env.CLIENT_ID
     const clientSecret = process.env.CLIENT_SECRET;
 
-    const response = await fetch(`${process.env.PAYPAL_BASE_URL}v1/oauth2/token`, {
+    const response = await fetch(`${process.env.TOKEN_URL}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -22,15 +24,14 @@ const getAccessToken = async ()=>{
     return data.access_token
 }
 
-const createOrder = async (currency_code, value)=>{
+const createOrder = async (currency_code, value, orderID)=>{
 
     const paypalRequestId = uuidv4()
-    const PAYPAL_API = `${process.env.PAYPAL_BASE_URL}v2/checkout/orders`
     const accessToken = await getAccessToken()
     const PAYPAL_AUTH_TOKEN = `Bearer ${accessToken}` 
     const currencyCode = currency_code.toUpperCase()
 
-    const response = await fetch(PAYPAL_API, {
+    const response = await fetch(`${process.env.PAYPAL_BASE_URL}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -41,41 +42,29 @@ const createOrder = async (currency_code, value)=>{
             "intent": "CAPTURE",
             "purchase_units": [
             {
-                items:[
-                    {
-                        "name": "nodejs course",
-                        "quantity": "1",
-                        "description": "DIGITAL_GOODS",
-                        "unit_amount": {
-                            "currency_code": String(currencyCode),
-                            "value": String(value),
-                        }
-                    
-                    }
-                ],
                 "amount": {
-                    "currency_code": "USD",
-                    "value": "2000.00",
+                    "currency_code": String(currencyCode),
+                    "value": String(value),
                     breakdown: {
                         "item_total": {
                             "currency_code": String(currencyCode),
                             "value": String(value),
                         }
                     }
-                }
+                },
+                "custom_id" : orderID
             }
         ],
         "application_context": {
             "return_url": `${process.env.BASE_URL}orders`,
-            "cancel_url": `${process.env.BASE_URL}cancel`,
+            "cancel_url": `${process.env.BASE_URL}cancelorders`,
             "shipping_preference": "NO_SHIPPING",
             "user_action": "PAY_NOW",
             "brand_name": "Profbass"
             }
         })
     });
-    const data = response.json()
-    // console.log(response);
+    const data = await response.json()
     if(!response.ok){
         return null
     }
@@ -89,7 +78,7 @@ const captureOrder = async (order_id)=>{
     const accessToken = await getAccessToken()
     const PAYPAL_AUTH_TOKEN = `Bearer ${accessToken}` 
 
-    const response = fetch(`${process.env.PAYPAL_BASE_URL}v2/checkout/orders/${order_id}/capture`, {
+    const response =await fetch(`${process.env.PAYPAL_BASE_URL}${order_id}/capture`, {
             method: 'POST',
             headers: {
             'Content-Type': 'application/json',
@@ -99,16 +88,55 @@ const captureOrder = async (order_id)=>{
             body: JSON.stringify({})
             });
 
-            return response;
+    const data = await response.json()
+
+    return data
 
 }
 
+const getOrder = async (orderID)=>{
 
+    const accessToken = await getAccessToken()
+    const PAYPAL_AUTH_TOKEN = `Bearer ${accessToken}` 
+
+    const paypalResponse = await fetch(`${process.env.PAYPAL_BASE_URL}${orderID}`,
+        {
+            method: 'GET',
+            headers: {
+            Authorization: PAYPAL_AUTH_TOKEN,
+            'Content-Type': 'application/json',
+            },
+        }
+    );
+
+    if(!paypalResponse.ok){
+        return null
+    }
+
+    const data = paypalResponse.json()
+
+    return data
+}
+
+const conversionsOfCurrencies = async (currency)=> {
+
+    const response = await fetch(`https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_APIKEY}/latest/${currency}`)
+
+    const data = await response.json()
+
+    if(data.result == 'error'){
+        return null
+    }
+    if(data.result == 'success'){
+        return data.conversion_rates
+    }
+}
 
 module.exports = {
     createOrder,
     captureOrder,
-
+    getOrder,
+    conversionsOfCurrencies
 }
 
 
