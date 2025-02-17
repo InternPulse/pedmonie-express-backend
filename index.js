@@ -3,6 +3,7 @@ require('dotenv').config()
 const bodyParser = require('body-parser')
 const PaypalRouter = require('./Routes/paypal.route')
 const stripeRouter = require('./Routes/stripe.route')
+const flutterwaveRouter = require('./Routes/flutterwave.route')
 const port = process.env.APP_PORT || 1111
 const app = express()
 // const {sequelize} = require('./models/index')
@@ -16,5 +17,6 @@ app.listen(port, ()=>{
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json())
-app.use(PaypalRouter)
-app.use(stripeRouter)
+// app.use(PaypalRouter)
+// app.use(stripeRouter)
+app.use(flutterwaveRouter)
