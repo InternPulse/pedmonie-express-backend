@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 
@@ -10,3 +11,4 @@ router.get('/admin/payments/:id', getPaymentDetails)
 
 
 module.exports = router;
+
