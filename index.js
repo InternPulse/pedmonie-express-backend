@@ -3,6 +3,7 @@ require('dotenv').config()
 const bodyParser = require('body-parser')
 const PaypalRouter = require('./Routes/paypal.route')
 const stripeRouter = require('./Routes/stripe.route')
+
 const port = process.env.APP_PORT || 1111
 const app = express()
 // const {sequelize} = require('./models/index')
