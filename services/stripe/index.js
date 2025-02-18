@@ -49,7 +49,7 @@ const orderCheckout = async (req, res) => {
           quantity: 1,
           },
         ],
-        gateway_transaction_identifier: `TXN-${uuidv4()}`,
+        gateway_transaction_identifier: session.session_id,
         success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`, 
         cancel_url: cancelUrl,
         metadata: {
@@ -118,7 +118,7 @@ const verifyCheckout = async (req, res) => {
         }
         const wallet = await createWallet(walletData, { transaction: t })
         //function to credit wallet
-        
+
         await t.commit()
         return res.status(200).json({
           status: "success",
