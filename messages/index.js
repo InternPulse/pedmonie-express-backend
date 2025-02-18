@@ -10,6 +10,11 @@ const messages = {
         ORDER_CAPTURED_SUCCESS: 'Order captured successfully',
         ORDER_CANCELLED: 'Order cancelled successfully',
         WALLET_NOT_FOUND: 'Wallet not found',
+        REFERENCE_NOT_FOUND: 'Reference not found',
+        VERIFY_FAILED: 'Verification failed',
+        PAYMENT_ABANDONED: 'Payment abandoned',
+        INVALID_REQUEST: 'Invalid request',
+        ORDER_ALREADY_COMPLETED: 'Order already completed',
 }
 
 module.exports = {

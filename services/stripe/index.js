@@ -1,3 +1,4 @@
+
 const Stripe = require('stripe')
 const { createUnpaidOrder, updateOrderStatus, createTransaction, createWallet } = require('../../controller/stripe/index')
 const { validateOrder } = require('../../validations/stripe/index')
@@ -5,12 +6,13 @@ const { sequelize } = require("../../models/index.js")
 const Transaction = require('../../models/transaction')(sequelize, require("sequelize").DataTypes)
 const { v4: uuidv4 } = require('uuid');
 
-require('dotenv').config()
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
-exports.stripe = stripe
-const successUrl = process.env.SUCCESS_URL
-const cancelUrl = process.env.CANCEL_URL
+// require('dotenv').config()
+
+// const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+// exports.stripe = stripe
+// const successUrl = process.env.SUCCESS_URL
+// const cancelUrl = process.env.CANCEL_URL
 
 const orderCheckout = async (req, res) => {
   //to add merchant_id
@@ -147,8 +149,9 @@ const verifyCheckout = async (req, res) => {
         })
   }
 
-}
-module.exports = {
-    orderCheckout,
-    verifyCheckout
-}
+
+// }
+// module.exports = {
+//     orderCheckout,
+//     verifyCheckout
+// }
