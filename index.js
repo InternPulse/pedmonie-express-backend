@@ -24,9 +24,9 @@ app.use(express.json())
 app.use("/api/v1",PaypalRouter)
 
 
-app.use("/api/v1/", PaystackRouter)
-app.use(stripeRouter)
+app.use("/api/v1", PaystackRouter)
+// app.use(stripeRouter)
 
-app.use('/flutterwave', flutterwaveRouter);
+app.use('/api/v1', flutterwaveRouter);
 
 

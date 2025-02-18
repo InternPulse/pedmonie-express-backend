@@ -10,7 +10,7 @@ exports.createOrder = async (req, res) => {
 
   // Validate the request body
   if (!amount || !currency || !customer_email) {
-      return res.status(400).json({ error: "Missing required fields" });
+      return res.status(400).json({status: false, error: "Missing required fields" });
   }
 
   try {
@@ -20,9 +20,7 @@ exports.createOrder = async (req, res) => {
           gateway_name: "flutterwave",
           amount,
           currency,
-          order_status: "pending",
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          order_status: "pending"
       });
 
       // Use the order_id (UUID) as the tx_ref
@@ -35,7 +33,7 @@ exports.createOrder = async (req, res) => {
               tx_ref,
               amount,
               currency,
-              redirect_url: `${process.env.BASE_URL}/flutterwave/callback`, 
+              redirect_url: `${process.env.BASE_URL}callback`, 
               payment_options: "card, banktransfer, ussd",
               customer: {
                   email: customer_email,
@@ -52,7 +50,7 @@ exports.createOrder = async (req, res) => {
       if (response.data.status === "success" && response.data.data) {
           const transactionLink = response.data.data.link;
           return res.status(201).json({
-              status: "success",
+              status: true,
               message: "Order created successfully",
               data: {
                   order_id: newOrder.order_id,
@@ -62,7 +60,7 @@ exports.createOrder = async (req, res) => {
           });
       } else {
           return res.status(400).json({
-              status: "error",
+              status: false,
               message: "Transaction could not be initialized",
               details: response.data.message || "Unknown error",
           });
@@ -70,13 +68,12 @@ exports.createOrder = async (req, res) => {
   } catch (error) {
       console.error("Flutterwave API error:", error.message);
       return res.status(500).json({
-          status: "error",
+          status: false,
           message: "Internal Server Error",
           details: error.message,
       });
   }
-};
-
+}
 
 
 exports.flutterwaveCallback = async (req, res) => {
@@ -84,9 +81,21 @@ exports.flutterwaveCallback = async (req, res) => {
 
   // Check if required parameters are present
   if (!transaction_id || !tx_ref) {
-    return res.status(400).json({ error: "Missing transaction details" });
+    return res.status(400).json({status:false, error: "Missing transaction details" });
   }
 
+  const existingTransaction = await Transaction.findOne({
+        where: { gateway_transaction_identifier: transaction_id },
+        attributes: ['transaction_id'] // Only fetch what's needed
+      });
+
+      if(existingTransaction != null) {
+        return res.status(409).json({
+          status: false,
+          message: "Transaction has already been processed",
+        });
+
+      }
   try {
     // Verify the transaction with Flutterwave
     const response = await axios.get(
@@ -118,7 +127,7 @@ exports.flutterwaveCallback = async (req, res) => {
 
       if (!order) {
         return res.status(404).json({
-          status: "error",
+          status: false,
           message: "Order not found",
         });
       }
@@ -126,37 +135,21 @@ exports.flutterwaveCallback = async (req, res) => {
       const merchant_id = order.merchant_id;
 
       // Check if transaction already exists to avoid duplicates
-      const existingTransaction = await Transaction.findOne({
-        where: { gateway_transaction_identifier: transaction_id },
-        attributes: ['transaction_id'] // Only fetch what's needed
-      });
+      
 
-      if (!existingTransaction) {
+      
         // Create a new transaction record
         await Transaction.create({
           order_id,
           merchant_id,
           gateway_name: "flutterwave",
           gateway_transaction_identifier: transaction_id,
-          transaction_reference: transactionData.tx_ref,
           payment_channel: transactionData.payment_type,
           amount: transactionData.amount,
           status: transactionStatus,
           currency: transactionData.currency,
-          createdAt: new Date(),
-          updatedAt: new Date()
         });
-      } else {
-        // Update existing transaction
-        await Transaction.update(
-          {
-            status: transactionStatus,
-            payment_channel: transactionData.payment_type,
-            amount: transactionData.amount,
-          },
-          { where: { gateway_transaction_identifier: transaction_id } }
-        );
-      }
+      
 
       // Update order status
       await Order.update(
@@ -180,7 +173,7 @@ exports.flutterwaveCallback = async (req, res) => {
         if (!settlementAmount) {
           console.error("Settlement amount not found in transaction data");
           return res.status(400).json({
-            status: "error",
+            status: false,
             message: "Settlement amount not available",
           });
         }
@@ -194,7 +187,7 @@ exports.flutterwaveCallback = async (req, res) => {
         if (isNaN(creditedAmount) || creditedAmount <= 0) {
           console.error("Invalid credited amount:", creditedAmount);
           return res.status(400).json({
-            status: "error",
+            status: false,
             message: "Invalid credited amount",
           });
         }
@@ -222,12 +215,12 @@ exports.flutterwaveCallback = async (req, res) => {
       }
 
       return res.status(200).json({
-        status: "success",
+        status: true,
         message: "Transaction verified and processed",
       });
     } else {
       return res.status(400).json({
-        status: "error",
+        status: false,
         message: "Transaction verification failed",
         details: flwResponse.message || "Unknown error",
       });
@@ -235,9 +228,9 @@ exports.flutterwaveCallback = async (req, res) => {
   } catch (error) {
     console.error("Transaction verification error:", error.message);
     return res.status(500).json({
-      status: "error",
+      status: false,
       message: "Internal Server Error",
       details: error.message,
     });
   }
-};
+}
