@@ -1,114 +1,96 @@
 const axios = require("axios");
 const { Order, Transaction, Wallet } = require("../../models");
+const { v4: uuidv4 } = require('uuid');
+const orderId = uuidv4();
 
-
-exports.createTransaction = async (req, res) => {
+//Create an order once the user chooses the payment gateway with a pending status
+exports.createOrder = async (req, res) => {
   const { merchant_id } = req.params;
   const { amount, currency, customer_email } = req.body;
 
-  // Validate the details received
+  // Validate the request body
   if (!amount || !currency || !customer_email) {
-    return res.status(400).json({ error: "Missing required fields" });
+      return res.status(400).json({ error: "Missing required fields" });
   }
 
   try {
-    const tx_ref = `txn_${Date.now()}`; // Unique transaction reference
-
-    // Create an order in the database with status 'pending'
-    const newOrder = await Order.create({
-      merchant_id,
-      gateway_name: "flutterwave",
-      amount,
-      currency,
-      order_status: "pending",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    // Hit the payment gateway endpoint to initialize transaction
-    const response = await axios.post(
-      "https://api.flutterwave.com/v3/payments",
-      {
-        tx_ref,
-        amount,
-        currency,
-        redirect_url: "https://pedmonie.com/payment-success",
-        payment_options: "card, banktransfer, ussd",
-        customer: {
-          email: customer_email,
-        },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (response.data.status === "success") {
-      // Create a transaction and link it to the order
-      await Transaction.create({
-        order_id: newOrder.order_id,
-        merchant_id,
-        gateway_name: "flutterwave",
-        gateway_transaction_identifier: response.data.data.id,
-        payment_channel: "card, banktransfer, ussd",
-        amount,
-        status: "pending",
-        currency,
-      });
-
-      // Return the response from the payment gateway initialization
-      return res.status(201).json({
-        status: "success",
-        message: "Transaction created successfully",
-        data: {
-          order_id: newOrder.order_id,
-          tx_ref,
+      // Create order with status 'pending'
+      const newOrder = await Order.create({
+          merchant_id,
+          gateway_name: "flutterwave",
           amount,
           currency,
-          payment_options: "card, banktransfer, ussd",
-          customer: {
-            email: customer_email,
+          order_status: "pending",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+      });
+
+      // Use the order_id (UUID) as the tx_ref
+      const tx_ref = newOrder.order_id;
+
+      // Initialize payment with Flutterwave
+      const response = await axios.post(
+          "https://api.flutterwave.com/v3/payments",
+          {
+              tx_ref,
+              amount,
+              currency,
+              redirect_url: `${process.env.BASE_URL}/flutterwave/callback`, 
+              payment_options: "card, banktransfer, ussd",
+              customer: {
+                  email: customer_email,
+              },
           },
-          redirect_url: response.data.data.link, // Flutterwave payment link
-        },
-      });
-    } else {
-      return res.status(400).json({
-        status: "error",
-        message: "Transaction could not be created",
-      });
-    }
+          {
+              headers: {
+                  Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+                  "Content-Type": "application/json",
+              },
+          }
+      );
+
+      if (response.data.status === "success" && response.data.data) {
+          const transactionLink = response.data.data.link;
+          return res.status(201).json({
+              status: "success",
+              message: "Order created successfully",
+              data: {
+                  order_id: newOrder.order_id,
+                  tx_ref,
+                  redirect_url: transactionLink,
+              },
+          });
+      } else {
+          return res.status(400).json({
+              status: "error",
+              message: "Transaction could not be initialized",
+              details: response.data.message || "Unknown error",
+          });
+      }
   } catch (error) {
-    console.error("Flutterwave API error:", error.response?.data || error.message);
-    return res.status(500).json({
-      status: "error",
-      message: "Internal Server Error",
-      details: error.message,
-    });
+      console.error("Flutterwave API error:", error.message);
+      return res.status(500).json({
+          status: "error",
+          message: "Internal Server Error",
+          details: error.message,
+      });
   }
 };
 
 
 
+exports.flutterwaveCallback = async (req, res) => {
+  const { status, tx_ref, transaction_id } = req.query;
 
-
-exports.verifyTransaction = async (req, res) => {
-  const { transaction_id } = req.params;
+  // Check if required parameters are present
+  if (!transaction_id || !tx_ref) {
+    return res.status(400).json({ error: "Missing transaction details" });
+  }
 
   try {
-    // Retrieve the transaction from the database
-    const transaction = await Transaction.findOne({ where: { transaction_id } });
-
-    if (!transaction) {
-      return res.status(404).json({ error: "Transaction not found" });
-    }
-
     // Verify the transaction with Flutterwave
     const response = await axios.get(
-      `https://api.flutterwave.com/v3/transactions/${transaction.gateway_transaction_identifier}/verify`,
+      `https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`,
       {
         headers: {
           Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
@@ -118,55 +100,140 @@ exports.verifyTransaction = async (req, res) => {
     );
 
     const flwResponse = response.data;
+    
+    // Log the full Flutterwave response to inspect the structure
+    console.log("Flutterwave Response:", JSON.stringify(flwResponse, null, 2));
 
-    if (flwResponse.status === "success" && flwResponse.data.status === "successful") {
-      // Update transaction status to 'successful'
-      await transaction.update({
-        status: "successful",
-        gateway_transaction_identifier: flwResponse.data.id,
+    // Check if the verification was successful
+    if (flwResponse.status === "success") {
+      const transactionData = flwResponse.data;
+      const transactionStatus = transactionData.status;
+      const order_id = transactionData.tx_ref;
+
+      // Fetch merchant_id from the Order table with specific attributes
+      const order = await Order.findOne({ 
+        where: { order_id },
+        attributes: ['order_id', 'merchant_id'] // Explicitly select required fields
       });
 
-      // Update order status to 'successful'
+      if (!order) {
+        return res.status(404).json({
+          status: "error",
+          message: "Order not found",
+        });
+      }
+
+      const merchant_id = order.merchant_id;
+
+      // Check if transaction already exists to avoid duplicates
+      const existingTransaction = await Transaction.findOne({
+        where: { gateway_transaction_identifier: transaction_id },
+        attributes: ['transaction_id'] // Only fetch what's needed
+      });
+
+      if (!existingTransaction) {
+        // Create a new transaction record
+        await Transaction.create({
+          order_id,
+          merchant_id,
+          gateway_name: "flutterwave",
+          gateway_transaction_identifier: transaction_id,
+          transaction_reference: transactionData.tx_ref,
+          payment_channel: transactionData.payment_type,
+          amount: transactionData.amount,
+          status: transactionStatus,
+          currency: transactionData.currency,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      } else {
+        // Update existing transaction
+        await Transaction.update(
+          {
+            status: transactionStatus,
+            payment_channel: transactionData.payment_type,
+            amount: transactionData.amount,
+          },
+          { where: { gateway_transaction_identifier: transaction_id } }
+        );
+      }
+
+      // Update order status
       await Order.update(
-        { order_status: "successful" },
-        { where: { order_id: transaction.order_id } }
+        {
+          order_status:
+            transactionStatus === "successful" ? "successful" : "failed",
+        },
+        { where: { order_id } }
       );
 
-      // Credit the merchant's wallet with the amount credited by Flutterwave
-      const creditedAmount = flwResponse.data.settlement_amount;
-      const wallet = await Wallet.findOne({ where: { merchant_id: transaction.merchant_id } });
+      // Credit merchant's wallet if payment was successful
+      if (transactionStatus === "successful") {
+        // Safely access settlement amount with optional chaining
+        let settlementAmount = transactionData.settlement_amount;
+        
+        // If settlementAmount is undefined, try other possible fields
+        if (!settlementAmount) {
+          settlementAmount = transactionData.amount_settled;
+        }
 
-      if (wallet) {
-        wallet.amount = parseFloat(wallet.amount) + parseFloat(creditedAmount);
-        await wallet.save();
-      } else {
-        // Create a wallet if none exists
-        await Wallet.create({
-          merchant_id: transaction.merchant_id,
-          amount: creditedAmount,
-          currency: transaction.currency,
+        if (!settlementAmount) {
+          console.error("Settlement amount not found in transaction data");
+          return res.status(400).json({
+            status: "error",
+            message: "Settlement amount not available",
+          });
+        }
+
+        // Strip currency symbol and convert to float
+        const creditedAmount = parseFloat(
+          settlementAmount.toString().replace(/[^\d.]/g, "")
+        );
+
+        // Validate credited amount
+        if (isNaN(creditedAmount) || creditedAmount <= 0) {
+          console.error("Invalid credited amount:", creditedAmount);
+          return res.status(400).json({
+            status: "error",
+            message: "Invalid credited amount",
+          });
+        }
+
+        // Find wallet with explicit attributes
+        const wallet = await Wallet.findOne({ 
+          where: { merchant_id },
+          attributes: ['merchant_id', 'amount'] // Only select what's needed
         });
+
+        if (wallet) {
+          await Wallet.update(
+            { amount: parseFloat(wallet.amount) + creditedAmount },
+            { where: { merchant_id } }
+          );
+        } else {
+          await Wallet.create({
+            merchant_id,
+            amount: creditedAmount,
+            currency: transactionData.currency,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        }
       }
 
       return res.status(200).json({
         status: "success",
-        message: "Transaction verified and wallet credited",
+        message: "Transaction verified and processed",
       });
     } else {
-      // Update transaction and order status to 'failed'
-      await transaction.update({ status: "failed" });
-      await Order.update(
-        { order_status: "failed" },
-        { where: { order_id: transaction.order_id } }
-      );
-
       return res.status(400).json({
         status: "error",
         message: "Transaction verification failed",
+        details: flwResponse.message || "Unknown error",
       });
     }
   } catch (error) {
-    console.error("Transaction verification error:", error.response?.data || error.message);
+    console.error("Transaction verification error:", error.message);
     return res.status(500).json({
       status: "error",
       message: "Internal Server Error",
