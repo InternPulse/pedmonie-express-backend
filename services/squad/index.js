@@ -51,16 +51,20 @@ module.exports = {
         }
 
         const transactionStatus = response.data;
-        if (transactionStatus.status === 200){
-            console.log(transactionStatus)
-            return transactionStatus
+        if (!transactionStatus.status === 200){
+          return res.status(400).json({
+            data: transactionStatus
+          }  )
         }
-        return res.status(400).json({
-          data: transactionStatus
-        }  )     
+
+        return transactionStatus     
 
     } catch (error) {
-        return new Error(error)        
+      res.status(500).json({
+        status: false,
+        message: "Internal sever error",
+        error: error.message,  
+      })    
     }    
   }
 };

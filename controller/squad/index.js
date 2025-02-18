@@ -1,7 +1,9 @@
 const SQUADService = require("../../services/squad");
 const ValidationSchema = require("../../validations/squad");
 const hash_compare_values = require("./utils/hashValues.js")
-const {sequelize} = require('../../models/index.js')
+const {sequelize} = require('../../models/index.js');
+const { where } = require("sequelize");
+const order = require("../../models/order.js");
 
 //Import merchant model
 const Merchant = require('../../models/merchant.js')(sequelize, require('sequelize').DataTypes);
@@ -33,42 +35,48 @@ module.exports = {
     }
 
     const merchantEmail = value.email
+    const initializedAmount = value.amount
+    const initializedCurrency = value.currency_code
 
-    const MerchantData = await Merchant.create({
-      first_name: "Daniel",
-      last_name: "Ochigbo",
-      middle_name: "Ojo",
-      email: "ochigbodaniel240@gmail.com",
-      phone: "+s454553",
-      role: "merchant",
-      password_hash: "ekklklkmrfr",
-      password_salt: "e34rrer",
-      total_balance: 40000.00,
-      business_name: "ftfcftcttu tuf"
+    //This database call will be updated to find the merchant with the merchant_id
+    const MerchantData = await Merchant.findOne({
+      where: {
+          email: merchantEmail,
+      }
+  })
+
+  //An order is created in the database to keep track of the customers activity
+  const order =await Order.create({
+    merchant_id: MerchantData.merchant_id,
+    gateway_name: 'Squad',
+    order_status: 'pending',
+    amount: initializedAmount,
+    currency: initializedCurrency,
+})
+
+if(!order){
+    return res.status(404).json({
+        status: false,
+        message: messages.ORDER_FAILED,
     })
+}
 
-    console.log(MerchantData)
+const orderID = order.order_id
 
-     //This database call will be updated to find the merchant with the merchant_id
-
+    
     
     // Send the validated request body to the service function
     // response status of initiation from the service function
     try {        
         const responseStatus = await SQUADService.initializePayment(
         merchantEmail,
-        value.amount * 100, // converting to the lowest denomination
-        value.currency_code
+        initializedAmount, // converting to the lowest denomination
+        initializedCurrency
       );
 
-      // Get the transaction referrence
-      const transactionRef = responseStatus.data.transaction_ref
-      // hash the transaction reference
-      const hashRef = await hash_compare_values.hashValue(transactionRef)
-      console.log(hashRef)
-
       return res.status(200).json({
-        data: responseStatus
+        orrder_id: orderID,
+        data: responseStatus.data
       })
 
     } catch (error) {
@@ -79,19 +87,61 @@ module.exports = {
   },
 
   verifyPayment: async (req, res, next)=>{
+    //A DB transaction is initiated
+    const t = await sequelize.transaction();
+
     // get reference from the req body
-    const {transactionRef} = req.body
+    const {transactionRef, order_id} = req.body
+    if(!transactionRef || !order_id){
+      res.status(403).json({
+          status: false,
+          message: "Transaction reference and id are required is required",
+      })
+  }
+
 
     //Call the verification query from the service folder
     try {
         const verificationStatus = await SQUADService.verifyPayment(transactionRef)
+        const transactionStatus = verificationStatus.data.transaction_status
         
+        const order = await Order.findOne({
+          where: {order_id:order_id}
+        })
+
+        if(order){
+          order.dataValues.order_status= transactionStatus
+          await order.save()
+        }
+
+        const updatedOrader = order.dataValues
+
+        console.log(updatedOrader)
+
+        
+        // Create a new transaction record
+        const newTransactionData = {
+          order_id: updatedOrader.order_id,
+          merchant_id: updatedOrader.merchant_id,
+          gateway_name: updatedOrader.gateway_name,
+          gateway_transaction_identifier: transactionRef,
+          payment_channel: 'card',
+          amount: updatedOrader.amount,
+          status: updatedOrader.order_status === 'abandoned' ? "fail" : updatedOrader.order_status, // optional, as 'pending' is the default
+          currency: updatedOrader.currency
+        };
+
+        
+
         return res.status(200).json({
-            data: verificationStatus
+            data: verificationStatus.data
         });
 
     } catch (error) {
-        throw new Error(error.message)
+        return res.status(500).json({
+          message: "Internal server error",
+          error:error
+      });
     }
 
     //Get the transaction status
