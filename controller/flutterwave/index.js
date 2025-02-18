@@ -75,7 +75,6 @@ exports.createOrder = async (req, res) => {
   }
 }
 
-
 exports.flutterwaveCallback = async (req, res) => {
   const { status, tx_ref, transaction_id } = req.query;
 
