@@ -31,6 +31,6 @@ app.use('/api/v1', flutterwaveRouter);
 
 
 app.get('/', (req, res)=>{
-    res.send('Welcome to Express API')
+    res.send('Welcome to Pedmonie Express API')
 })
 
