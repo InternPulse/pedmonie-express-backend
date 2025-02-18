@@ -21,9 +21,12 @@ app.listen(port, ()=>{
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json())
 
-app.use("/api/v1", PaypalRouter)
+app.use("/api/v1",PaypalRouter)
+
+
 app.use("/api/v1/", PaystackRouter)
-// app.use(stripeRouter)
+app.use(stripeRouter)
 
 app.use('/flutterwave', flutterwaveRouter);
+
 
