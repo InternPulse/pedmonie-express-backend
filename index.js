@@ -3,7 +3,6 @@ require('dotenv').config()
 const bodyParser = require('body-parser')
 const PaypalRouter = require('./Routes/paypal.route')
 const stripeRouter = require('./Routes/stripe.route')
-const paystackRouter = require("./Routes/paystack.route");
 const flutterwaveRouter = require('./Routes/flutterwave.route');
 
 const port = process.env.APP_PORT || 1111
@@ -20,6 +19,4 @@ app.use(express.json())
 app.use('/flutterwave', flutterwaveRouter);
 app.use("/api/v1", PaypalRouter)
 app.use("/api/v1", stripeRouter)
-app.use('/flutterwave', flutterwaveRouter);
-app.use("/api/v1", PaypalRouter)
-app.use("/api/v1", stripeRouter)
+
