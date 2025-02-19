@@ -3,7 +3,6 @@ require('dotenv').config()
 const bodyParser = require('body-parser')
 const PaypalRouter = require('./Routes/paypal.route')
 
-// const stripeRouter = require('./Routes/stripe.route')
 const PaystackRouter = require('./Routes/paystack.route')
 
 const stripeRouter = require('./Routes/stripe.route')
@@ -25,7 +24,7 @@ app.use("/api/v1",PaypalRouter)
 
 
 app.use("/api/v1", PaystackRouter)
-// app.use(stripeRouter)
+app.use('/api/v1', stripeRouter)
 
 app.use('/api/v1', flutterwaveRouter);
 
