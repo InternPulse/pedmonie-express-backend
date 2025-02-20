@@ -27,11 +27,11 @@ module.exports = {
     
     //Valida the data parsed to the request body
     const { error, value } = ValidationSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({
-        status: "failed",
-        message: `${error}`,
-      });
+      if (error) {
+        return res.status(400).json({
+          status: "failed",
+          message: `${error}`,
+        });
     }
 
     const merchantEmail = value.email
@@ -42,29 +42,27 @@ module.exports = {
     const MerchantData = await Merchant.findOne({
       where: {
           email: merchantEmail,
-      }
-  })
+          }
+      })
 
   //An order is created in the database to keep track of the customers activity
-  const order =await Order.create({
-    merchant_id: MerchantData.merchant_id,
-    gateway_name: 'Squad',
-    order_status: 'pending',
-    amount: initializedAmount,
-    currency: initializedCurrency,
-})
-
-if(!order){
-    return res.status(404).json({
-        status: false,
-        message: messages.ORDER_FAILED,
+    const order = await Order.create({
+      merchant_id: MerchantData.merchant_id,
+      gateway_name: 'Squad',
+      order_status: 'pending',
+      amount: initializedAmount,
+      currency: initializedCurrency,
     })
-}
 
-const orderID = order.order_id
+    if(!order){
+        return res.status(404).json({
+            status: false,
+            message: messages.ORDER_FAILED,
+        })
+    }
 
-    
-    
+    const orderID = order.order_id
+
     // Send the validated request body to the service function
     // response status of initiation from the service function
     try {        
@@ -81,7 +79,7 @@ const orderID = order.order_id
 
     } catch (error) {
       return res.status(404).json({
-        message: "An eeror occurred"
+        message: "An eeror occurred",
       });
     }
   },
@@ -100,14 +98,40 @@ const orderID = order.order_id
   }
 
 
+  // check if the payment reference already exist in a successful transaction
+  const existingTransaction = await Transaction.findOne(
+    {
+      where: {
+      gateway_transaction_identifier: transactionRef,
+      status: 'successful'
+    },
+  })
+  
+
+  if (existingTransaction){
+    return res.status(401).json({
+      status: false,
+      message: "Trasaction already conculded"
+        })
+  }
+
+
     //Call the verification query from the service folder
     try {
         const verificationStatus = await SQUADService.verifyPayment(transactionRef)
         const transactionStatus = verificationStatus.data.transaction_status
-        
+        const transactionChannel = verificationStatus.data
+        console.log(transactionChannel)
         const order = await Order.findOne({
           where: {order_id:order_id}
         })
+
+
+
+        if(!verificationStatus){
+          order.dataValues.order_status= "faild"
+          await order.save()
+        }
 
         if(order){
           order.dataValues.order_status= transactionStatus
@@ -115,27 +139,48 @@ const orderID = order.order_id
         }
 
         const updatedOrader = order.dataValues
-
-        console.log(updatedOrader)
-
         
         // Create a new transaction record
-        const newTransactionData = {
+        const newTransactionData = await Transaction.create(
+          {
           order_id: updatedOrader.order_id,
           merchant_id: updatedOrader.merchant_id,
           gateway_name: updatedOrader.gateway_name,
           gateway_transaction_identifier: transactionRef,
-          payment_channel: 'card',
+          payment_channel: verificationStatus.data.transaction_type,
           amount: updatedOrader.amount,
-          status: updatedOrader.order_status === 'abandoned' ? "fail" : updatedOrader.order_status, // optional, as 'pending' is the default
+          status: transactionStatus === 'abandoned' ? "failed" : updatedOrader.order_status, // optional, as 'pending' is the default
           currency: updatedOrader.currency
-        };
-
-        
-
-        return res.status(200).json({
-            data: verificationStatus.data
         });
+        
+        if(newTransactionData.status === 'successful'){
+          const  wallet = await Wallect.findOne({
+            where: {merchant_id:newTransactionData.merchant_id}
+          })
+
+          if (!wallet){
+            return res.status(404).json({
+              message: "Wallect not found"
+            })
+          }
+
+          //add fund to wallect
+          await wallet.update(
+            {
+              amount: verificationStatus.data.amount
+            }
+          )
+
+          return res.status(200).json({
+            message: "Payment verified",
+            data: wallet
+        });
+        }
+        return res.status(400).json({
+          message: `Transaction ${newTransactionData.status}`,
+          data: newTransactionData
+        })
+
 
     } catch (error) {
         return res.status(500).json({
