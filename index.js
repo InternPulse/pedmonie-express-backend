@@ -5,7 +5,7 @@ const PaypalRouter = require('./Routes/paypal.route')
 
 // const stripeRouter = require('./Routes/stripe.route')
 const PaystackRouter = require('./Routes/paystack.route')
-
+const PaymentRouter = require('./Routes/paymentprocessing.route')
 const stripeRouter = require('./Routes/stripe.route')
 const flutterwaveRouter = require('./Routes/flutterwave.route');
 
@@ -19,7 +19,8 @@ app.listen(port, ()=>{
 })
 
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(express.json())
+// app.use(express.json())
+app.use('/api/v1', PaymentRouter)
 
 app.use("/api/v1",PaypalRouter)
 
@@ -28,7 +29,6 @@ app.use("/api/v1", PaystackRouter)
 // app.use(stripeRouter)
 
 app.use('/api/v1', flutterwaveRouter);
-
 
 app.get('/', (req, res)=>{
     res.send('Welcome to Pedmonie Express API')
