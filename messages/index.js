@@ -26,7 +26,8 @@ const messages = {
         USER_NOT_FOUND: 'User not found',
         INVALID_TOKEN: 'Invalid token',
         EXPIRED_TOKEN: 'Expired token',
-        UNAUTHORIZED: 'User not authorized'
+        UNAUTHORIZED: 'User not authorized',
+        MERCHANT_NOT_FOUND: 'Merchant not found',
 }
 
 module.exports = {

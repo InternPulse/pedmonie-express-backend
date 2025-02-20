@@ -131,7 +131,15 @@ async function updatePaymentGateway(req, res){
 async function getMerchantPaymentGateways (req, res) {
 
     try {
-        const { merchant_id } = req.params
+
+        const merchant_id = req.user.merchant_id
+
+        if( !merchant_id){
+            return res.status(404).json({
+                status: false,
+                message: messages.MERCHANT_NOT_FOUND
+            })
+        }
 
         const response = await MerchantPaymentGateway.findOne({
             where: { merchant_id }
@@ -162,7 +170,15 @@ async function createMerchantPaymentGateway (req, res) {
     try {
         
         const { payment_gateways } = req.body
-        const { merchant_id } = req.params
+        
+        const merchant_id = req.user.merchant_id
+
+        if( !merchant_id){
+            return res.status(404).json({
+                status: false,
+                message: messages.MERCHANT_NOT_FOUND
+            })
+        }
 
         const { error } = validateMerchantPaymentGateway(req.body);
         if (error) {
@@ -203,7 +219,15 @@ async function createMerchantPaymentGateway (req, res) {
 
 async function updateMerchantPaymentGateway(req, res){
     try {
-        const { merchant_id } = req.params
+        
+        const merchant_id = req.user.merchant_id
+
+        if( !merchant_id){
+            return res.status(404).json({
+                status: false,
+                message: messages.MERCHANT_NOT_FOUND
+            })
+        }
 
         if(!req.body.payment_gateways){
             return res.status(400).json({
