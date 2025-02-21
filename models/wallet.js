@@ -12,10 +12,9 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       Wallet.belongsTo(models.Merchant, {
-        foreignKey: 'merchant_id',
-      })
-
-      models.Merchant.hasOne(Wallet)
+        foreignKey: "merchant_id",
+        as: "merchant",
+      });
     }
   }
   Wallet.init({
@@ -44,11 +43,13 @@ module.exports = (sequelize, DataTypes) => {
       currency:{
         type: DataTypes.STRING,
         allowNull: false,
-        defaultValue: 'USD'  
+        defaultValue: 'NGN'  
       },
     }, {
     sequelize,
     modelName: 'Wallet',
+    timestamps: true,
+    underscored: true,
   });
   return Wallet;
 };

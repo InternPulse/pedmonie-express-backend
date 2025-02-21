@@ -33,6 +33,8 @@ module.exports = (sequelize, DataTypes) => {
     }, {
     sequelize,
     modelName: 'MerchantPaymentGateway',
+    timestamps: true,
+    underscored: true,
   });
   return MerchantPaymentGateway;
 };
