@@ -12,8 +12,30 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       Merchant.hasMany(models.Order, {
-        foreignKey: 'merchant_id',
-      })
+        foreignKey: "merchant_id",
+        as: "orders",
+        onDelete: "CASCADE",
+      });
+      Merchant.hasMany(models.MerchantPaymentGateway, {
+        foreignKey: "merchant_id",
+        as: "merchantPaymentGateways",
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
+      });
+      Merchant.hasMany(models.Transaction, {
+        foreignKey: "merchant_id",
+        as: "transactions",
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
+      });
+      Merchant.hasOne(models.Wallet, {
+        foreignKey: "merchant_id",
+        as: "wallet",
+      });
+      Merchant.hasMany(models.Withdrawal, {
+        foreignKey: "merchant_id",
+        as: "withdrawals",
+      });
     }
   }
   Merchant.init({
@@ -31,19 +53,19 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       first_name: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false,
       },
       last_name: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false,
       },
       middle_name: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false,
       },
       email: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(100),
         allowNull: false,
         unique: true,
       },
@@ -65,7 +87,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       phone: {
-        type:DataTypes.STRING, // Changed from INTEGER to STRING (better for phone numbers)
+        type:DataTypes.STRING(20), // Changed from INTEGER to STRING (better for phone numbers)
         allowNull: false,
         unique: true,
       },
@@ -124,17 +146,12 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: false,
         allowNull: false,
       },
-      createdAt: {
-        allowNull: false,
-        type:DataTypes.DATE,
-      },
-      updatedAt: {
-        allowNull: false,
-        type:DataTypes.DATE,
-      },
+      
     }, {
     sequelize,
     modelName: 'Merchant',
+    timestamps: true,
+    underscored: true,
   });
   return Merchant;
 };

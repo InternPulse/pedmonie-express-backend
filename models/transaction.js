@@ -10,11 +10,18 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      Transaction.belongsTo(models.Merchant,{ foreignKey: 'merchant_id'})
-      models.Merchant.hasMany(Transaction)
-
-      Transaction.belongsTo(models.Order, { foreignKey: 'order_id'})
-      models.Merchant.hasMany(Transaction)
+        Transaction.belongsTo(models.Order, {
+            foreignKey: "order_id",
+            as: "orders",
+            onDelete: "CASCADE",
+            onUpdate: "CASCADE",
+          });
+          Transaction.belongsTo(models.Merchant, {
+            foreignKey: "merchant_id",
+            as: "merchant",
+            onUpdate: "CASCADE",
+            onDelete: "CASCADE",
+          });
     }
   }
   Transaction.init({
@@ -40,20 +47,20 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       gateway_name: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false
 
       },
       gateway_transaction_identifier: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false
       },
       payment_channel: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false
       },
       amount: {
-        type: DataTypes.DECIMAL,
+        type: DataTypes.DECIMAL(15, 2),
         allowNull: false
       },
       status: {
@@ -68,6 +75,8 @@ module.exports = (sequelize, DataTypes) => {
     }, {
     sequelize,
     modelName: 'Transaction',
+    timestamps: true,
+    underscored: true,
   });
   return Transaction;
 };
