@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class PaymentGateways extends Model {
+  class PaymentGateway extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of DataTypes lifecycle.
@@ -11,9 +11,15 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      PaymentGateway.hasMany(models.MerchantPaymentGateway, {
+        foreignKey: "gateway_id",
+        as: "merchantGateways",
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
+      });
     }
   }
-  PaymentGateways.init({
+  PaymentGateway.init({
       sn: {
         allowNull: false,
         autoIncrement: true,
@@ -28,7 +34,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false
       },
       gateway_name: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false
       },
       is_active: {
@@ -36,7 +42,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: false,
       },
       gateway_logo: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(2083),
         allowNull: false
       },
       createdAt: {
@@ -52,5 +58,5 @@ module.exports = (sequelize, DataTypes) => {
     modelName: 'PaymentGateways',
     tableName: 'paymentgateways'
   });
-  return PaymentGateways;
+  return PaymentGateway;
 };
