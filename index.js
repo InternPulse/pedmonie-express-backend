@@ -6,12 +6,13 @@ const limiter = require("./middlewares/rateLimiter");
 const bodyParser = require("body-parser");
 const PaypalRouter = require("./Routes/paypal.route");
 
-// const stripeRouter = require('./Routes/stripe.route')
+
 const PaystackRouter = require("./Routes/paystack.route");
 const PaymentRouter = require("./Routes/paymentprocessing.route");
 const stripeRouter = require("./Routes/stripe.route");
 const flutterwaveRouter = require("./Routes/flutterwave.route");
 const monnifyRouter = require("./Routes/monnify.route");
+
 
 const port = process.env.APP_PORT || 1111;
 const app = express();
@@ -26,8 +27,10 @@ app.use("/api/v1", PaymentRouter);
 
 app.use("/api/v1", PaypalRouter);
 
-app.use("/api/v1", PaystackRouter);
-// app.use(stripeRouter)
+
+app.use("/api/v1", PaystackRouter)
+app.use('/api/v1', stripeRouter)
+
 
 app.use("/api/v1", flutterwaveRouter);
 
