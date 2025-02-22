@@ -11,8 +11,11 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      Order.belongsTo(models.Merchant, { foreignKey: 'merchant_id'} )
-      models.Merchant.hasMany(Order);
+      Order.belongsTo(models.Merchant, {
+        foreignKey: "merchant_id",
+        as: "merchant",
+      });
+    
     }
   }
   Order.init({
@@ -50,17 +53,12 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 'pending',
         allowNull: false
       },
-      createdAt: {
-        allowNull: false,
-        type: DataTypes.DATE
-      },
-      updatedAt: {
-        allowNull: false,
-        type: DataTypes.DATE
-      }
+     
     }, {
     sequelize,
     modelName: 'Order',
+    timestamps: true,
+    underscored: true,
   });
   return Order;
 };

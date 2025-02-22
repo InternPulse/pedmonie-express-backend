@@ -11,6 +11,12 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      PaymentGateway.hasMany(models.MerchantPaymentGateway, {
+        foreignKey: "gateway_id",
+        as: "merchantGateways",
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
+      });
     }
   }
   PaymentGateway.init({
@@ -28,16 +34,18 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false
       },
       gateway_name: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false
       },
       gateway_logo: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(2083),
         allowNull: false
       }
     }, {
     sequelize,
     modelName: 'PaymentGateway',
+    timestamps: true,
+    underscored: true,
   });
   return PaymentGateway;
 };
