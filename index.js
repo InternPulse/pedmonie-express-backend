@@ -6,17 +6,26 @@ const PaypalRouter = require('./Routes/paypal.route')
 // const stripeRouter = require('./Routes/stripe.route')
 const PaystackRouter = require('./Routes/paystack.route')
 const PaymentRouter = require('./Routes/paymentprocessing.route')
-const stripeRouter = require('./Routes/stripe.route')
 const flutterwaveRouter = require('./Routes/flutterwave.route');
-
+// const Merchant = require('./models/merchants.js')
 
 const port = process.env.APP_PORT || 1111
 const app = express()
 const {sequelize} = require('./models/index')
 
-app.listen(port, ()=>{
-    console.log(`Server running on port ${port}`)
+async function connection(){
+    try{
+        await sequelize.sync()
+        console.log('Connection has been established successfully.');
+        app.listen(port, ()=>{
+        console.log(`Server running on port ${port}`)
 })
+    }catch(error){
+        console.error('Unable to connect to the database:', error);
+    }
+} 
+connection()
+
 
 app.use(bodyParser.urlencoded({ extended: false }));
 // app.use(express.json())
@@ -26,7 +35,6 @@ app.use("/api/v1",PaypalRouter)
 
 
 app.use("/api/v1", PaystackRouter)
-// app.use(stripeRouter)
 
 app.use('/api/v1', flutterwaveRouter);
 

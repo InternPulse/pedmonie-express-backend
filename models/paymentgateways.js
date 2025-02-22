@@ -21,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
         unique: true
       },
       gateway_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.CHAR(36),
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         unique: true,
@@ -31,13 +31,26 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false
       },
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
       gateway_logo: {
         type: DataTypes.STRING,
         allowNull: false
-      }
+      },
+      createdAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
+      },
+      updatedAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
+      },
     }, {
     sequelize,
     modelName: 'PaymentGateways',
+    tableName: 'paymentgateways'
   });
   return PaymentGateways;
 };

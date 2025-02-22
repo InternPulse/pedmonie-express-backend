@@ -4,13 +4,12 @@ const { validateOrder } = require('../../validations/paystack')
 const {sequelize} = require('../../models/index.js')
 const { conversionsOfCurrencies } = require('../../services/paypal')
 const { messages } = require('../../messages/index.js')
-const Merchant = require('../../models/merchant.js')(sequelize, require('sequelize').DataTypes)
 const Order = require('../../models/order.js')(sequelize, require('sequelize').DataTypes)
 const Transaction = require('../../models/transaction.js')(sequelize, require('sequelize').DataTypes)
 const Wallet = require('../../models/wallet.js')(sequelize, require('sequelize').DataTypes)
 
 const makePaymentRequest = async (req, res)=>{
-
+console.log('got here')
     try {
         const { email, amount, merchant_id, currency } = req.body
 
@@ -151,10 +150,10 @@ const verifyPayment = async (req, res)=>{
         }
     )
 
-        const getWallet = await Wallet.findOne({
-            where:{
-                merchant_id: merchant_id
-            }
+        const getWallet = await Wallet.create({
+                merchant_id: merchant_id,
+                amount: transaction.amount,
+                currency: transaction.currency
         })
 
         const transactionIntoWallet = await Transaction.create({
@@ -169,7 +168,8 @@ const verifyPayment = async (req, res)=>{
         },
     )
         const convert = await conversionsOfCurrencies(getWallet.currency)
-        
+            console.log('got here A')
+
         if(convert == null){
             res.status(404).json({
                 status: false,
@@ -178,6 +178,7 @@ const verifyPayment = async (req, res)=>{
         }
 
         const AmountSendToWallet = (transaction.amount/convert[transaction.currency]).toFixed(2)
+            console.log('got here B')
 
         const incrementAmount = Number(getWallet.amount) + Number(AmountSendToWallet)
         

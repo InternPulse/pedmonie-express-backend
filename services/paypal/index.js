@@ -123,7 +123,7 @@ const conversionsOfCurrencies = async (currency)=> {
     const response = await fetch(`https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_APIKEY}/latest/${currency}`)
 
     const data = await response.json()
-
+    console.log(data)
     if(data.result == 'error'){
         return null
     }

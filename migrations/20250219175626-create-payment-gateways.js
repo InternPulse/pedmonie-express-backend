@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('PaymentGateways', {
+    await queryInterface.createTable('paymentgateways', {
       sn: {
         allowNull: false,
         autoIncrement: true,
@@ -15,6 +15,10 @@ module.exports = {
         primaryKey: true,
         unique: true,
         allowNull: false
+      },
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
       },
       gateway_name: {
         type: Sequelize.STRING,
@@ -35,6 +39,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('PaymentGateways');
+    await queryInterface.dropTable('paymentgateways');
   }
 };

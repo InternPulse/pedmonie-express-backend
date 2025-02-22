@@ -21,13 +21,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         autoIncrement: true,
         type: DataTypes.INTEGER,
-        unique: true,
-      },
+        },
       merchant_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.CHAR(36),
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
-        unique: true,
         allowNull: false,
       },
       first_name: {
@@ -45,7 +43,6 @@ module.exports = (sequelize, DataTypes) => {
       email: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true,
       },
       is_email_verified: {
         type: DataTypes.BOOLEAN,
@@ -56,33 +53,27 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      password_hash: {
+      password: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      password_salt: {
-        type:DataTypes.STRING,
-        allowNull: false,
-      },
+      
       phone: {
         type:DataTypes.STRING, // Changed from INTEGER to STRING (better for phone numbers)
         allowNull: false,
-        unique: true,
+      },
+      is_staff:{
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
       },
       role: {
-        type:DataTypes.ENUM('admin', 'merchant'), // Fixed ENUM syntax
+        type:DataTypes.ENUM('superadmin', 'merchant'), // Fixed ENUM syntax
         defaultValue: 'merchant',
-        allowNull: false,
-      },
-      total_balance: {
-        type:DataTypes.DECIMAL(10, 2),
-        defaultValue: 0,
         allowNull: false,
       },
       nin: {
         type:DataTypes.STRING,
         allowNull: true,
-        unique: true,
       },
       is_nin_verified: {
         type:DataTypes.BOOLEAN,
@@ -92,7 +83,6 @@ module.exports = (sequelize, DataTypes) => {
       bvn: {
         type:DataTypes.STRING,
         allowNull: true,
-        unique: true,
       },
       is_bvn_verified: {
         type:DataTypes.BOOLEAN,
@@ -102,9 +92,8 @@ module.exports = (sequelize, DataTypes) => {
       cac_number: {
         type:DataTypes.STRING,
         allowNull: true,
-        unique: true,
       },
-      is_cac_verified: {
+      is_business_cac_verified: {
         type:DataTypes.BOOLEAN,
         defaultValue: false,
         allowNull: false,
@@ -112,12 +101,10 @@ module.exports = (sequelize, DataTypes) => {
       id_card: {
         type:DataTypes.STRING,
         allowNull: true,
-        unique: true,
       },
       passport: {
         type:DataTypes.STRING,
         allowNull: true,
-        unique: true,
       },
       is_kyc_verified: {
         type:DataTypes.BOOLEAN,
@@ -135,6 +122,7 @@ module.exports = (sequelize, DataTypes) => {
     }, {
     sequelize,
     modelName: 'Merchant',
+    tableName: 'merchants',
   });
   return Merchant;
 };

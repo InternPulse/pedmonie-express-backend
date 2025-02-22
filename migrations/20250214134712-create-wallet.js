@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Wallets', {
+    await queryInterface.createTable('wallets', {
       sn: {
         allowNull: false,
         autoIncrement: true,
@@ -20,7 +20,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: 'Merchants',
+          model: 'merchants',
           key: 'merchant_id'
         },
         onDelete: 'CASCADE'
@@ -46,6 +46,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Wallets');
+    await queryInterface.dropTable('wallets');
   }
 };

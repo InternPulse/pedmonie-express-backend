@@ -23,14 +23,14 @@ module.exports = (sequelize, DataTypes) => {
         unique: true
       },
       order_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.CHAR(36),
         primaryKey: true,
         defaultValue: DataTypes.UUIDV4,
         unique: true,
         allowNull: false
       },
       merchant_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.CHAR(36),
         allowNull: false,
       },
       gateway_name: {  
@@ -61,6 +61,7 @@ module.exports = (sequelize, DataTypes) => {
     }, {
     sequelize,
     modelName: 'Order',
+    tableName: 'orders'
   });
   return Order;
 };

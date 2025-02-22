@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const {sequelize} = require('../models/index.js')
-const Merchant = require('../models/merchant.js')(sequelize, require('sequelize').DataTypes)
+const Merchant = require('../models/merchants.js')(sequelize, require('sequelize').DataTypes)
 const { messages } = require('../messages/index.js')
 
 

@@ -1,4 +1,5 @@
 const {sequelize} = require('../../models/index.js')
+const Merchant = require('../../models/merchantS.js')(sequelize, require('sequelize').DataTypes)
 
 const PaymentGateway = require('../../models/paymentgateways.js')(sequelize, require('sequelize').DataTypes)
 const MerchantPaymentGateway = require('../../models/merchantpaymentgateway.js')(sequelize, require('sequelize').DataTypes)
@@ -10,7 +11,8 @@ async function getPaymentGateways(req, res){
     
     try {
         const response = await PaymentGateway.findAll()
-
+        const merchants = await Merchant.findAll()
+        console.log(merchants)
         if(response.length < 1){
         return res.status(404).json({
             status: false,

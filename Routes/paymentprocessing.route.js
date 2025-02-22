@@ -6,7 +6,7 @@ const authorization = require('../middlewares/Authorization')
 
 
 router.post('/gateways',authentication, authorization(['superadmin']), createPaymentGateway)
-router.get('/gateways', authentication, authorization(['superadmin', 'merchant']), getPaymentGateways)
+router.get('/gateways', getPaymentGateways)
 router.patch('/gateways/:gateway_id', authentication, authorization(['superadmin']), updatePaymentGateway)
 router.get('/merchants/gateways', authentication, authorization(['superadmin', 'merchant']), getMerchantPaymentGateways)
 router.post('/merchants/gateways', authentication, authorization(['superadmin', 'merchant']), createMerchantPaymentGateway)

@@ -16,14 +16,14 @@ module.exports = (sequelize, DataTypes) => {
         unique: true
       },
       withdrawal_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.CHAR(36),
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         unique: true,
         allowNull: false
       },
       merchant_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.CHAR(36),
         allowNull: false,
       },
       amount: {
@@ -42,10 +42,19 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM('pending', 'successful', 'failed'),
         allowNull: false,
         defaultValue: 'pending'
-      }
+      },
+      createdAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
+      },
+      updatedAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
+      },
     }, {
     sequelize,
     modelName: 'Withdrawal',
+    tableName: 'withdrawals'
   });
   return Withdrawal;
 };

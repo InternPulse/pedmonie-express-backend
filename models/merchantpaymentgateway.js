@@ -16,23 +16,32 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   MerchantPaymentGateway.init({
-      id: {
+      sn: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: DataTypes.INTEGER
       },
       merchant_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.CHAR(36),
         allowNull: false,
       },
       payment_gateways: {
         type: DataTypes.JSON,
         allowNull: false
+      },
+      createdAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
+      },
+      updatedAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
       }
     }, {
     sequelize,
     modelName: 'MerchantPaymentGateway',
+    tableName: 'merchant_payment_gateway',
   });
   return MerchantPaymentGateway;
 };

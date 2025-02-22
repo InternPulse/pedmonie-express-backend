@@ -7,7 +7,7 @@ const { messages } = require('../../messages/index.js')
 //This is how to import the models from the models folder
 
 //Models
-const Merchant = require('../../models/merchant.js')(sequelize, require('sequelize').DataTypes)
+const Merchant = require('../../models/merchantS.js')(sequelize, require('sequelize').DataTypes)
 const Order = require('../../models/order.js')(sequelize, require('sequelize').DataTypes)
 const Transaction = require('../../models/transaction.js')(sequelize, require('sequelize').DataTypes)
 const Wallet = require('../../models/wallet.js')(sequelize, require('sequelize').DataTypes)

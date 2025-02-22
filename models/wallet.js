@@ -26,14 +26,14 @@ module.exports = (sequelize, DataTypes) => {
         unique: true
       },
       wallet_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.CHAR(36),
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         unique: true,
         allowNull: false
       },
       merchant_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.CHAR(36),
         allowNull: false,
       },
       amount: {
@@ -44,11 +44,20 @@ module.exports = (sequelize, DataTypes) => {
       currency:{
         type: DataTypes.STRING,
         allowNull: false,
-        defaultValue: 'USD'  
+        defaultValue: 'NGN'  
+      },
+      createdAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
+      },
+      updatedAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
       },
     }, {
     sequelize,
     modelName: 'Wallet',
+    tableName: 'wallets'
   });
   return Wallet;
 };

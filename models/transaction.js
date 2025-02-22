@@ -25,18 +25,18 @@ module.exports = (sequelize, DataTypes) => {
         unique: true
       },
       transaction_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.CHAR(36),
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         unique: true,
         allowNull: false
       },
       order_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.CHAR(36),
         allowNull: false,
       },
       merchant_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.CHAR(36),
         allowNull: false,
       },
       gateway_name: {
@@ -64,10 +64,19 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false
       },
+      createdAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
+      },
+      updatedAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
+      },
       
     }, {
     sequelize,
     modelName: 'Transaction',
+    tableName: 'transactions'
   });
   return Transaction;
 };
