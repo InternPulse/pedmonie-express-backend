@@ -2,6 +2,8 @@
 const {
   Model
 } = require('sequelize');
+const shortUUID = require('short-uuid');
+const translator = shortUUID();
 module.exports = (sequelize, DataTypes) => {
   class Order extends Model {
     /**
@@ -26,14 +28,14 @@ module.exports = (sequelize, DataTypes) => {
         unique: true
       },
       order_id: {
-        type: DataTypes.CHAR(36),
+        type: DataTypes.CHAR(32),
         primaryKey: true,
-        defaultValue: DataTypes.UUIDV4,
+        defaultValue:() => translator.new(),
         unique: true,
         allowNull: false
       },
       merchant_id: {
-        type: DataTypes.CHAR(36),
+        type: DataTypes.CHAR(32),
         allowNull: false,
       },
       gateway_name: {  

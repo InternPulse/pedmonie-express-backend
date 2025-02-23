@@ -7,6 +7,7 @@ const { messages } = require('../../messages/index.js')
 const Order = require('../../models/order.js')(sequelize, require('sequelize').DataTypes)
 const Transaction = require('../../models/transaction.js')(sequelize, require('sequelize').DataTypes)
 const Wallet = require('../../models/wallet.js')(sequelize, require('sequelize').DataTypes)
+const Merchant = require('../../models/merchants.js')(sequelize, require('sequelize').DataTypes)
 
 const makePaymentRequest = async (req, res)=>{
 console.log('got here')
@@ -29,6 +30,18 @@ console.log('got here')
         //     }
         // })
 
+//         const newMerchant = await Merchant.create({
+//             email: 'aaaa@gmail.com',
+//             currency: 'NGN',
+//             first_name: 'Johna',
+//             last_name: 'Smitha',
+//             middle_name: 'Johna Smith',
+//             business_name: 'Jo aaSmith',
+//             password: 'password123',
+//             phone: '08101019922',
+
+//         })
+// console.log('finished')
          //An order is created in the database to keep track of the customers activity
         const order =await Order.create({
             merchant_id: merchant_id,
