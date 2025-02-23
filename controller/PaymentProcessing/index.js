@@ -1,5 +1,5 @@
 const {sequelize} = require('../../models/index.js')
-const Merchant = require('../../models/merchantS.js')(sequelize, require('sequelize').DataTypes)
+const Merchant = require('../../models/merchants.js')(sequelize, require('sequelize').DataTypes)
 
 const PaymentGateway = require('../../models/paymentgateways.js')(sequelize, require('sequelize').DataTypes)
 const MerchantPaymentGateway = require('../../models/merchantpaymentgateway.js')(sequelize, require('sequelize').DataTypes)
