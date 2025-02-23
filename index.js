@@ -15,10 +15,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const limiter = require("./middlewares/rateLimiter");
 
-
-
-
-const stripeRouter = require("./Routes/stripe.route");
+// const stripeRouter = require("./Routes/stripe.route");
 const monnifyRouter = require("./Routes/monnify.route");
 
 const port = process.env.APP_PORT || 1111;
@@ -49,7 +46,7 @@ app.use("/api/v1", PaypalRouter);
 
 app.use("/api/v1", PaystackRouter)
 
-app.use('/api/v1', stripeRouter)
+// app.use('/api/v1', stripeRouter)
 
 
 app.use("/api/v1", flutterwaveRouter);

@@ -3,7 +3,7 @@ const { sequelize } = require("../../models/index.js")
 const Order = require("../../models/order.js")(sequelize, require("sequelize").DataTypes)
 const Transaction = require("../../models/transaction.js")(sequelize, require("sequelize").DataTypes)
 const Wallet = require("../../models/wallet.js")(sequelize, require("sequelize").DataTypes)
-const Merchant = require("../../models/merchant.js")(sequelize, require("sequelize").DataTypes)
+// const Merchant = require("../../models/merchants.js")(sequelize, require("sequelize").DataTypes)
 
 // Helper function to handle transactions and order retrieval
 const getOrderForTransaction = async (order_id, t) => {
