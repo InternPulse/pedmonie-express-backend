@@ -1,7 +1,7 @@
-const Stripe = require("stripe")
 const { validateOrder } = require("../../validations/stripe")
 const { createUnpaidOrder, createTransaction, creditWallet, convertCurrency } = require("../../controller/stripe/index")
 const { sequelize } = require("../../models")
+const Stripe = require("stripe")
 const Order = require('../../models/order')(sequelize, require("sequelize").DataTypes)
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -43,7 +43,7 @@ const initiatePayment = async (req, res) => {
             quantity: 1,
           },
         ],
-        success_url: `${successUrl}session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: cancelUrl,
         metadata: {
           merchant_id: merchantId,
@@ -73,10 +73,15 @@ const initiatePayment = async (req, res) => {
 const verifyPayment = async (req, res) => {
   const t = await sequelize.transaction()
   const { session_id } = req.params
+
   try {
     const session = await stripe.checkout.sessions.retrieve(session_id)
+    if (!session) {
+      await t.rollback()
+      return res.status(400).json({ status: "failed", message: "Invalid session ID!" })
+    }
+
     const { merchant_id, order_id } = session.metadata
-   
     const order = await Order.findOne({ where: { order_id } })
     if (!order) {
       await t.rollback()
@@ -99,10 +104,6 @@ const verifyPayment = async (req, res) => {
           order.currency,
           "NGN"
         ) 
-        const updatedOrderStatus = async () => {
-          await order.update({ order_status: "successful" }, { transaction: t })
-          return order
-        }
       const transactionData = {
         order_id,
         merchant_id,
@@ -120,14 +121,18 @@ const verifyPayment = async (req, res) => {
         amount: convertedAmount,
         currency: "",
       }
-          // Credit the wallet or create if not found
+      // Credit the wallet or create if not found
       const wallet = await creditWallet(walletData, { transaction: t })
-      const updatedOrder = await updatedOrderStatus()
+      const updatedOrderStatus = await order.update(
+        { order_status: "successful" },
+        { transaction: t }
+      )
 
       await t.commit()
-      console.log(updatedOrder)
+      console.log(updatedOrderStatus)
       console.log("Wallet amount:", wallet.amount, typeof wallet.amount)
       console.log("Order amount:", order.amount, typeof order.amount)
+
       return res.status(200).json({
         status: "success",
         message: "Payment verified successfully!",
