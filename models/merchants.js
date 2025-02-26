@@ -2,6 +2,8 @@
 const {
   Model
 } = require('sequelize');
+const shortUUID = require('short-uuid');
+const translator = shortUUID();
 module.exports = (sequelize, DataTypes) => {
   class Merchant extends Model {
     /**
@@ -13,28 +15,23 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       Merchant.hasMany(models.Order, {
         foreignKey: "merchant_id",
-        as: "orders",
         onDelete: "CASCADE",
       });
       Merchant.hasMany(models.MerchantPaymentGateway, {
         foreignKey: "merchant_id",
-        as: "merchantPaymentGateways",
         onUpdate: "CASCADE",
         onDelete: "CASCADE",
       });
       Merchant.hasMany(models.Transaction, {
         foreignKey: "merchant_id",
-        as: "transactions",
         onUpdate: "CASCADE",
         onDelete: "CASCADE",
       });
       Merchant.hasOne(models.Wallet, {
         foreignKey: "merchant_id",
-        as: "wallet",
       });
       Merchant.hasMany(models.Withdrawal, {
         foreignKey: "merchant_id",
-        as: "withdrawals",
       });
     }
   }
@@ -45,8 +42,8 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         },
       merchant_id: {
-        type: DataTypes.CHAR(36),
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.CHAR(32),
+        defaultValue: () => translator.new(),
         primaryKey: true,
         allowNull: false,
       },
@@ -65,6 +62,12 @@ module.exports = (sequelize, DataTypes) => {
       email: {
         type: DataTypes.STRING(100),
         allowNull: false,
+      },
+      last_login:{
+        type: DataTypes.DATE
+      },
+      is_superuser: {
+        type: DataTypes.BOOLEAN,
       },
       is_email_verified: {
         type: DataTypes.BOOLEAN,

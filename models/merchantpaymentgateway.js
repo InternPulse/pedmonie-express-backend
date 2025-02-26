@@ -23,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER
       },
       merchant_id: {
-        type: DataTypes.CHAR(36),
+        type: DataTypes.CHAR(32),
         allowNull: false,
       },
       payment_gateways: {

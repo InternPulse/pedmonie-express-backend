@@ -2,6 +2,8 @@
 const {
   Model
 } = require('sequelize');
+const shortUUID = require('short-uuid');
+const translator = shortUUID();
 module.exports = (sequelize, DataTypes) => {
   class PaymentGateway extends Model {
     /**
@@ -27,8 +29,8 @@ module.exports = (sequelize, DataTypes) => {
         unique: true
       },
       gateway_id: {
-        type: DataTypes.CHAR(36),
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.CHAR(32),
+        defaultValue:() => translator.new(),
         primaryKey: true,
         unique: true,
         allowNull: false
