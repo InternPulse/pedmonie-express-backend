@@ -2,8 +2,10 @@
 const {
   Model
 } = require('sequelize');
-const shortUUID = require('short-uuid');
-const translator = shortUUID();
+// const shortUUID = require('short-uuid');
+// const translator = shortUUID();
+const { v4: uuidv4 } = require('uuid');
+
 module.exports = (sequelize, DataTypes) => {
   class Wallet extends Model {
     /**
@@ -27,14 +29,18 @@ module.exports = (sequelize, DataTypes) => {
         unique: true
       },
       wallet_id: {
-        type: DataTypes.CHAR(32),
-        defaultValue: () => translator.new(),
+        type: DataTypes.UUID,
+        // defaultValue: () => translator.new(),
+        defaultValue: ()=>{
+          let uuid = uuidv4()
+          return uuid.toString().split('-').join('')
+        },
         primaryKey: true,
         unique: true,
         allowNull: false
       },
       merchant_id: {
-        type: DataTypes.CHAR(32),
+        type: DataTypes.UUID,
         allowNull: false,
       },
       amount: {

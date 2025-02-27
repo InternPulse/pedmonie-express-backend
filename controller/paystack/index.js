@@ -50,7 +50,6 @@ console.log('got here')
             amount: amount,
             currency: currency,
         })
-
         if(!order){
             return res.status(404).json({
                 status: false,
@@ -58,6 +57,7 @@ console.log('got here')
             })
         }
         const transaction =await initializeTransaction( email, amount, currency)
+console.log(transaction)
 
         await Transaction.create({
             order_id: order.order_id,
@@ -135,6 +135,15 @@ const verifyPayment = async (req, res)=>{
                     }
             });
 
+            await Transaction.update({
+            status: 'failed'
+        },{
+            where:{
+                gateway_transaction_identifier: reference
+            }
+        }
+    )
+
             return res.status(404).json({
                 status: false,
                 message: messages.VERIFY_FAILED,
@@ -163,12 +172,18 @@ const verifyPayment = async (req, res)=>{
         }
     )
 
-        const getWallet = await Wallet.create({
-                merchant_id: merchant_id,
-                amount: transaction.amount,
-                currency: transaction.currency
-        })
+        // const getWallet = await Wallet.create({
+        //         merchant_id: merchant_id,
+        //         amount: transaction.amount,
+        //         currency: transaction.currency
+        // })
 
+        const getWallet = await Wallet.findOne({
+                where: {
+                    merchant_id: merchant_id,
+                }
+        })
+        console.log('I am wallet',getWallet)
         const transactionIntoWallet = await Transaction.create({
             order_id,
             merchant_id: merchant_id,
@@ -191,7 +206,6 @@ const verifyPayment = async (req, res)=>{
         }
 
         const AmountSendToWallet = (transaction.amount/convert[transaction.currency]).toFixed(2)
-            console.log('got here B')
 
         const incrementAmount = Number(getWallet.amount) + Number(AmountSendToWallet)
         

@@ -272,6 +272,7 @@ async function updateMerchantPaymentGateway(req, res){
     }
 }
 
+
 module.exports = {
     getPaymentGateways,
     createPaymentGateway,

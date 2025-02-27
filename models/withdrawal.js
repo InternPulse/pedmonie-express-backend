@@ -1,13 +1,15 @@
 'use strict';
 const { Model } = require('sequelize');
-const shortUUID = require('short-uuid');
-const translator = shortUUID();
+const { v4: uuidv4 } = require('uuid');
+
+// const shortUUID = require('short-uuid')
+// const translator = shortUUID()
 module.exports = (sequelize, DataTypes) => {
   class Withdrawal extends Model {
     
     static associate(models) {
-      Withdrawal.belongsTo(models.Merchant, { foreignKey:'merchant_id' })
-      models.Merchant.hasMany(Withdrawal)
+      // Withdrawal.belongsTo(models.Merchant, { foreignKey:'merchant_id' })
+      // models.Merchant.hasMany(Withdrawal)
     }
   }
   Withdrawal.init({
@@ -18,14 +20,18 @@ module.exports = (sequelize, DataTypes) => {
         unique: true
       },
       withdrawal_id: {
-        type: DataTypes.CHAR(32),
-        defaultValue:() => translator.new(),
+        type: DataTypes.UUID,
+        // defaultValue:() => translator.new(),
+        defaultValue: ()=>{
+          let uuid = uuidv4()
+          return uuid.toString().split('-').join('')
+        },
         primaryKey: true,
         unique: true,
         allowNull: false
       },
       merchant_id: {
-        type: DataTypes.CHAR(32),
+        type: DataTypes.UUID,
         allowNull: false,
       },
       amount: {

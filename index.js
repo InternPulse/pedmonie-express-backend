@@ -24,7 +24,7 @@ const { sequelize } = require("./models/index");
 
 async function connection(){
     try{
-        await sequelize.sync()
+        // await sequelize.sync({alter: true});
         console.log('Connection has been established successfully.');
         app.listen(port, ()=>{
         console.log(`Server running on port ${port}`)
