@@ -1,5 +1,6 @@
 const SQUAD_BASE_URL = process.env.SQUAD_BASE_URL;
 const SQUAD_SECRETE_KEY = process.env.SQUAD_SECRETE_KEY
+
 const aioxs = require("axios");
 
 
@@ -43,28 +44,13 @@ module.exports = {
             }
         );
 
-        //When the request to the endpoint fails
-        if(!response){
-            return res.status(400).json({
-                message: "Something went wronge"
-            })
-        }
 
         const transactionStatus = response.data;
-        if (!transactionStatus.status === 200){
-          return res.status(400).json({
-            data: transactionStatus
-          }  )
-        }
 
         return transactionStatus     
 
     } catch (error) {
-      res.status(500).json({
-        status: false,
-        message: "Internal sever error",
-        error: error.message,  
-      })    
+      console.error(error)    
     }    
   }
 };
