@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Merchants', {
+    await queryInterface.createTable('merchants', {
       sn: {
         allowNull: false,
         autoIncrement: true,
@@ -56,13 +56,8 @@ module.exports = {
         unique: true,
       },
       role: {
-        type: Sequelize.ENUM('admin', 'merchant'), // Fixed ENUM syntax
+        type: Sequelize.ENUM('superadmin', 'merchant'), // Fixed ENUM syntax
         defaultValue: 'merchant',
-        allowNull: false,
-      },
-      total_balance: {
-        type: Sequelize.DECIMAL(10, 2),
-        defaultValue: 0,
         allowNull: false,
       },
       nin: {
@@ -121,6 +116,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Merchants');
+    await queryInterface.dropTable('merchants');
   }
 };

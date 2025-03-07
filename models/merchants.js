@@ -1,7 +1,9 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const {Model} = require('sequelize');
+// const shortUUID = require('short-uuid');
+// const translator = shortUUID();
+const { v4: uuidv4 } = require('uuid');
+
 module.exports = (sequelize, DataTypes) => {
   class Merchant extends Model {
     /**
@@ -12,8 +14,24 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       Merchant.hasMany(models.Order, {
-        foreignKey: 'merchant_id',
+        foreignKey: "merchant_id",
+        onDelete: "CASCADE",
+      });
+      Merchant.hasMany(models.MerchantPaymentGateway, {
+        foreignKey: "merchant_id",
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
+      });
+      Merchant.hasMany(models.Transaction, {
+        foreignKey: "merchant_id",
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
       })
+      
+      Merchant.hasOne(models.Wallet, {
+        foreignKey: "merchant_id",
+      });
+
     }
   }
   Merchant.init({
@@ -21,31 +39,39 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         autoIncrement: true,
         type: DataTypes.INTEGER,
-        unique: true,
-      },
+        unique: true 
+        },
       merchant_id: {
         type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        // defaultValue: () => translator.new(),
+        defaultValue: ()=>{
+          let uuid = uuidv4()
+          return uuid.toString().split('-').join('')
+        },
         primaryKey: true,
-        unique: true,
         allowNull: false,
       },
       first_name: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false,
       },
       last_name: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false,
       },
       middle_name: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false,
       },
       email: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(100),
         allowNull: false,
-        unique: true,
+      },
+      last_login:{
+        type: DataTypes.DATE
+      },
+      is_superuser: {
+        type: DataTypes.BOOLEAN,
       },
       is_email_verified: {
         type: DataTypes.BOOLEAN,
@@ -56,33 +82,27 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      password_hash: {
+      password: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      password_salt: {
-        type:DataTypes.STRING,
+      
+      phone: {
+        type:DataTypes.STRING(20), // Changed from INTEGER to STRING (better for phone numbers)
         allowNull: false,
       },
-      phone: {
-        type:DataTypes.STRING, // Changed from INTEGER to STRING (better for phone numbers)
-        allowNull: false,
-        unique: true,
+      is_staff:{
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
       },
       role: {
-        type:DataTypes.ENUM('admin', 'merchant'), // Fixed ENUM syntax
+        type:DataTypes.ENUM('superadmin', 'merchant'), // Fixed ENUM syntax
         defaultValue: 'merchant',
-        allowNull: false,
-      },
-      total_balance: {
-        type:DataTypes.DECIMAL(10, 2),
-        defaultValue: 0,
         allowNull: false,
       },
       nin: {
         type:DataTypes.STRING,
         allowNull: true,
-        unique: true,
       },
       is_nin_verified: {
         type:DataTypes.BOOLEAN,
@@ -92,7 +112,6 @@ module.exports = (sequelize, DataTypes) => {
       bvn: {
         type:DataTypes.STRING,
         allowNull: true,
-        unique: true,
       },
       is_bvn_verified: {
         type:DataTypes.BOOLEAN,
@@ -102,9 +121,8 @@ module.exports = (sequelize, DataTypes) => {
       cac_number: {
         type:DataTypes.STRING,
         allowNull: true,
-        unique: true,
       },
-      is_cac_verified: {
+      is_business_cac_verified: {
         type:DataTypes.BOOLEAN,
         defaultValue: false,
         allowNull: false,
@@ -112,29 +130,21 @@ module.exports = (sequelize, DataTypes) => {
       id_card: {
         type:DataTypes.STRING,
         allowNull: true,
-        unique: true,
       },
       passport: {
         type:DataTypes.STRING,
         allowNull: true,
-        unique: true,
       },
       is_kyc_verified: {
         type:DataTypes.BOOLEAN,
         defaultValue: false,
         allowNull: false,
       },
-      createdAt: {
-        allowNull: false,
-        type:DataTypes.DATE,
-      },
-      updatedAt: {
-        allowNull: false,
-        type:DataTypes.DATE,
-      },
+      
     }, {
     sequelize,
     modelName: 'Merchant',
+    tableName: 'merchants',
   });
   return Merchant;
 };

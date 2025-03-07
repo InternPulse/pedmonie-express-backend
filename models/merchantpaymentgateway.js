@@ -2,6 +2,8 @@
 const {
   Model
 } = require('sequelize');
+const { v4: uuidv4 } = require('uuid');
+
 module.exports = (sequelize, DataTypes) => {
   class MerchantPaymentGateway extends Model {
     /**
@@ -16,23 +18,33 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   MerchantPaymentGateway.init({
-      id: {
+      sn: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: DataTypes.INTEGER
       },
       merchant_id: {
+        // type: DataTypes.CHAR(32),
         type: DataTypes.UUID,
         allowNull: false,
       },
       payment_gateways: {
         type: DataTypes.JSON,
         allowNull: false
+      },
+      createdAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
+      },
+      updatedAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
       }
     }, {
     sequelize,
     modelName: 'MerchantPaymentGateway',
+    tableName: 'merchant_payment_gateway',
   });
   return MerchantPaymentGateway;
 };

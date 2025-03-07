@@ -1,7 +1,9 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const {Model} = require('sequelize');
+// const shortUUID = require('short-uuid');
+// const translator = shortUUID();
+const { v4: uuidv4 } = require('uuid');
+
 module.exports = (sequelize, DataTypes) => {
   class Transaction extends Model {
     /**
@@ -10,11 +12,18 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      Transaction.belongsTo(models.Merchant,{ foreignKey: 'merchant_id'})
-      models.Merchant.hasMany(Transaction)
-
-      Transaction.belongsTo(models.Order, { foreignKey: 'order_id'})
-      models.Merchant.hasMany(Transaction)
+        Transaction.belongsTo(models.Order, {
+            foreignKey: "order_id",
+            as: "orders",
+            onDelete: "CASCADE",
+            onUpdate: "CASCADE",
+          });
+          Transaction.belongsTo(models.Merchant, {
+            foreignKey: "merchant_id",
+            as: "merchant",
+            onUpdate: "CASCADE",
+            onDelete: "CASCADE",
+          });
     }
   }
   Transaction.init({
@@ -26,7 +35,11 @@ module.exports = (sequelize, DataTypes) => {
       },
       transaction_id: {
         type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        // defaultValue:() => translator.new(),
+        defaultValue: ()=>{
+          let uuid = uuidv4()
+          return uuid.toString().split('-').join('')
+        },
         primaryKey: true,
         unique: true,
         allowNull: false
@@ -40,20 +53,20 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       gateway_name: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false
 
       },
       gateway_transaction_identifier: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false
       },
       payment_channel: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         allowNull: false
       },
       amount: {
-        type: DataTypes.DECIMAL,
+        type: DataTypes.DECIMAL(15, 2),
         allowNull: false
       },
       status: {
@@ -64,10 +77,19 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false
       },
+      createdAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
+      },
+      updatedAt: {
+        allowNull: false,
+        type:DataTypes.DATE,
+      },
       
     }, {
     sequelize,
     modelName: 'Transaction',
+    tableName: 'transactions'
   });
   return Transaction;
 };

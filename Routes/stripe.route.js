@@ -1,9 +1,9 @@
 const express = require('express')
-const { orderCheckout, verifyCheckout } = require('../services/stripe/index')
-
+const { initiatePayment, verifyPayment} = require('../services/stripe')
 const router = express.Router()
 
-router.post("/orders-stripe", orderCheckout)
-router.get("/orders-stripe/:session_id", verifyCheckout)
+router.post("/orders-stripe", initiatePayment)
+
+router.get("/orders-stripe/:session_id", verifyPayment)
 
 module.exports = router

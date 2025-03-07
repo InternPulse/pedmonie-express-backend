@@ -2,35 +2,30 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Supports', {
+    await queryInterface.createTable('paymentgateways', {
       sn: {
         allowNull: false,
         autoIncrement: true,
         type: Sequelize.INTEGER,
         unique: true
       },
-      support_id: {
+      gateway_id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
         unique: true,
         allowNull: false
       },
-      merchant_id: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: {
-          model: 'Merchants',
-          key: 'merchant_id'
-        },
-        onDelete: 'CASCADE'
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
       },
-      status: {
-        type: Sequelize.ENUM('pending', 'resolved'),
-        defaultValue: 'pending',
+      gateway_name: {
+        type: Sequelize.STRING,
+        allowNull: false
       },
-      description: {
-        type: Sequelize.TEXT,
+      gateway_logo: {
+        type: Sequelize.STRING,
         allowNull: false
       },
       createdAt: {
@@ -44,6 +39,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Supports');
+    await queryInterface.dropTable('paymentgateways');
   }
 };

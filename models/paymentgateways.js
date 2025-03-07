@@ -1,36 +1,36 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
 // const shortUUID = require('short-uuid');
-// const translator = shortUUID();
 const { v4: uuidv4 } = require('uuid');
 
+// const translator = shortUUID();
 module.exports = (sequelize, DataTypes) => {
-  class Wallet extends Model {
+  class PaymentGateway extends Model {
     /**
      * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
+     * This method is not a part of DataTypes lifecycle.
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
       // define association here
-      Wallet.belongsTo(models.Merchant, {
-        foreignKey: "merchant_id",
-        as: "merchant",
+      PaymentGateway.hasMany(models.MerchantPaymentGateway, {
+        foreignKey: "gateway_id",
+        as: "merchantGateways",
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
       });
     }
   }
-  Wallet.init({
+  PaymentGateway.init({
       sn: {
         allowNull: false,
         autoIncrement: true,
         type: DataTypes.INTEGER,
         unique: true
       },
-      wallet_id: {
+      gateway_id: {
         type: DataTypes.UUID,
-        // defaultValue: () => translator.new(),
+        // defaultValue:() => translator.new(),
         defaultValue: ()=>{
           let uuid = uuidv4()
           return uuid.toString().split('-').join('')
@@ -39,19 +39,17 @@ module.exports = (sequelize, DataTypes) => {
         unique: true,
         allowNull: false
       },
-      merchant_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
+      gateway_name: {
+        type: DataTypes.STRING(50),
+        allowNull: false
       },
-      amount: {
-        type: DataTypes.DECIMAL,
-        allowNull: false,
-        defaultValue: 0.00
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
       },
-      currency:{
-        type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: 'NGN'  
+      gateway_logo: {
+        type: DataTypes.STRING(2083),
+        allowNull: false
       },
       createdAt: {
         allowNull: false,
@@ -63,8 +61,8 @@ module.exports = (sequelize, DataTypes) => {
       },
     }, {
     sequelize,
-    modelName: 'Wallet',
-    tableName: 'wallets'
+    modelName: 'PaymentGateways',
+    tableName: 'paymentgateways'
   });
-  return Wallet;
+  return PaymentGateway;
 };

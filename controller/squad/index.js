@@ -7,7 +7,7 @@ const { default: axios } = require("axios");
 
 
 //Import merchant model
-const Merchant = require('../../models/merchant.js')(sequelize, require('sequelize').DataTypes);
+const Merchant = require('../../models/merchants.js')(sequelize, require('sequelize').DataTypes);
 
 //Import the order model
 const Order = require('../../models/order.js')(sequelize, require('sequelize').DataTypes);

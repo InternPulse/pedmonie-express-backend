@@ -3,10 +3,11 @@ const { validateOrder } = require('../../validations/paypal/index.js')
 const {sequelize} = require('../../models/index.js')
 
 const { messages } = require('../../messages/index.js')
+
 //This is how to import the models from the models folder
 
 //Models
-const Merchant = require('../../models/merchant.js')(sequelize, require('sequelize').DataTypes)
+const Merchant = require('../../models/merchants.js')(sequelize, require('sequelize').DataTypes)
 const Order = require('../../models/order.js')(sequelize, require('sequelize').DataTypes)
 const Transaction = require('../../models/transaction.js')(sequelize, require('sequelize').DataTypes)
 const Wallet = require('../../models/wallet.js')(sequelize, require('sequelize').DataTypes)
@@ -27,15 +28,15 @@ const createOrderController = async (req, res) => {
         }
 
         //This database call will be updated to find the merchant with the merchant_id
-        const MerchantData = await Merchant.findOne({
-            where: {
-                email: 'murewa.abass@gmail.com',
-            }
-        })
+        // const MerchantData = await Merchant.findOne({
+        //     where: {
+        //         email: 'murewa.abass@gmail.com',
+        //     }
+        // })
 
         //An order is created in the database to keep track of the customers activity
         const order =await Order.create({
-            merchant_id: MerchantData.merchant_id,
+            merchant_id: merchant_id,
             gateway_name: 'PAYPAL',
             order_status: 'pending',
             amount: value,
@@ -78,9 +79,6 @@ const createOrderController = async (req, res) => {
 
 //This function is responsible for completing the payment transaction
 const completeOrder = async (req, res) => {
-
-    //A DB transaction is initiated
-    const t = await sequelize.transaction();
 
     try {
 
@@ -134,8 +132,8 @@ const completeOrder = async (req, res) => {
                 {order_status: 'failed'}, {
                     where: {
                         order_id: order_id,
-                    },
-                    transaction: t,
+                    }
+            
             });
 
             //Returning various messages depending on the response.name
@@ -194,6 +192,17 @@ const completeOrder = async (req, res) => {
                 message: messages.WALLET_NOT_FOUND,
             })
         }
+        const transactionIntoWallet = await Transaction.create({
+            order_id,
+            merchant_id: merchant_order.merchant_id,
+            gateway_name: 'PAYPAL',
+            gateway_transaction_identifier: 'Payment Into Wallet',
+            payment_channel: 'CARD',
+            amount: customer_paid,
+            currency: customer_paid_currency,
+            status:'pending'
+        },
+    )
         //get the different conversions for various currency codes using the merchant's wallet currency as the base currency
         const convert = await conversionsOfCurrencies(getWallet.currency)
 
@@ -215,7 +224,6 @@ const completeOrder = async (req, res) => {
             where: {
                 order_id: order_id,
             },
-            transaction: t,
         });
         
         const transact = await Transaction.create({
@@ -228,13 +236,19 @@ const completeOrder = async (req, res) => {
             currency: customer_paid_currency,
             status:'successful'
         },
-    {transaction: t})
-
-        
+    )
 
         const incrementAmount = Number(getWallet.amount) + Number(AmountSendToWallet)
-        await getWallet.update({ amount: incrementAmount}, {transaction: t })        
+        
+        //this updates the wallet amount in the database
+        await getWallet.update({ amount: incrementAmount} )        
 
+        await Transaction.update({status:'successful'},{
+            where: {
+                transaction_id: transactionIntoWallet.transaction_id
+            },
+        
+        })
         res.status(200).json({
             status: true,
             message: messages.ORDER_CAPTURED_SUCCESS,
@@ -244,7 +258,7 @@ const completeOrder = async (req, res) => {
             }
         })
 
-        await t.commit();
+        
 
     } catch (error) {
 
@@ -253,7 +267,7 @@ const completeOrder = async (req, res) => {
             status: false,
             message: error.message,
         })
-        await t.rollback();
+        
     }
 }
 
@@ -271,14 +285,21 @@ const cancelOrder = async (req, res) => {
 
         //get the cancelled order from paypal API
         const orders = await getOrder(token)
+        // console.log('cancel',orders)
 
-        if(orders == null || orders.status !== 'COMPLETED'){
+        if(orders == null){
             return res.status(400).json({
                 status: false,
-                message: messages.INCOMPLETE_ORDER
+                message: messages.ERROR_OCCURED
             })
         }
 
+        if(orders.status === 'COMPLETED'){
+            return res.status(400).json({
+                status: false,
+                message: messages.ORDER_ALREADY_COMPLETED,
+            })
+        }
         //get the order_id from of the database that was stored as a custom_id
         const order_id = orders.purchase_units[0].custom_id
 
@@ -292,6 +313,14 @@ const cancelOrder = async (req, res) => {
                 order_id: order_id,
             }
         })
+        Transaction.update(
+            {
+            status:'failed'  
+            },
+            {
+                where: {order_id: order_id}
+            }
+    )
 
         res.status(200).json({
             status: true,
@@ -308,5 +337,5 @@ const cancelOrder = async (req, res) => {
 module.exports = {
     createOrderController,
     completeOrder,
-    cancelOrder
+    cancelOrder,
 }
