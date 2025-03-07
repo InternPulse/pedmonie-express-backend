@@ -1,9 +1,10 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
-const shortUUID = require('short-uuid');
-const translator = shortUUID();
+const { Model } = require('sequelize');
+// const { nextSN } = require('../controller/paypal/index')
+// const shortUUID = require('short-uuid');
+// const translator = shortUUID();
+const { v4: uuidv4 } = require('uuid');
+
 module.exports = (sequelize, DataTypes) => {
   class Order extends Model {
     /**
@@ -28,14 +29,18 @@ module.exports = (sequelize, DataTypes) => {
         unique: true
       },
       order_id: {
-        type: DataTypes.CHAR(32),
+        type: DataTypes.UUID,
         primaryKey: true,
-        defaultValue:() => translator.new(),
+        // defaultValue:() => translator.new(),
+        defaultValue: ()=>{
+          let uuid = uuidv4()
+          return uuid.toString().split('-').join('')
+        },
         unique: true,
         allowNull: false
       },
       merchant_id: {
-        type: DataTypes.CHAR(32),
+        type: DataTypes.UUID,
         allowNull: false,
       },
       gateway_name: {  
@@ -63,3 +68,4 @@ module.exports = (sequelize, DataTypes) => {
   });
   return Order;
 };
+

@@ -5,18 +5,29 @@ const authorization =(role)=>{
 
         try {
 
-        const {user} = req.user
+        const user = req.user
+        // console.log('auth',user)
 
-        if(!user) throw new Error(messages.USER_NOT_FOUND , 401)
+        if(!user){
+            return res.status(401).json({
+                status: false,
+                message: messages.USER_NOT_FOUND,
+            })
+        }
 
         //check if the user's role matches the required role
-        if(!role.includes(user.role)) throw new Error( messages.UNAUTHORIZED , 403 )
+        if(!role.includes(user.role)){
+            return res.status(403).json({
+                status: false,
+                message: messages.UNAUTHORIZED
+            })
+        }
 
         next()
         } catch (error) {
             res.status(500).json({
                 message: error.message,
-                status: 'error'
+                status: false
 
             })
         }

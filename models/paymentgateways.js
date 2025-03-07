@@ -1,9 +1,9 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
-const shortUUID = require('short-uuid');
-const translator = shortUUID();
+const { Model } = require('sequelize');
+// const shortUUID = require('short-uuid');
+const { v4: uuidv4 } = require('uuid');
+
+// const translator = shortUUID();
 module.exports = (sequelize, DataTypes) => {
   class PaymentGateway extends Model {
     /**
@@ -29,8 +29,12 @@ module.exports = (sequelize, DataTypes) => {
         unique: true
       },
       gateway_id: {
-        type: DataTypes.CHAR(32),
-        defaultValue:() => translator.new(),
+        type: DataTypes.UUID,
+        // defaultValue:() => translator.new(),
+        defaultValue: ()=>{
+          let uuid = uuidv4()
+          return uuid.toString().split('-').join('')
+        },
         primaryKey: true,
         unique: true,
         allowNull: false

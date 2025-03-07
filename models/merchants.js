@@ -1,9 +1,9 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
-const shortUUID = require('short-uuid');
-const translator = shortUUID();
+const {Model} = require('sequelize');
+// const shortUUID = require('short-uuid');
+// const translator = shortUUID();
+const { v4: uuidv4 } = require('uuid');
+
 module.exports = (sequelize, DataTypes) => {
   class Merchant extends Model {
     /**
@@ -26,13 +26,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "merchant_id",
         onUpdate: "CASCADE",
         onDelete: "CASCADE",
-      });
+      })
+      
       Merchant.hasOne(models.Wallet, {
         foreignKey: "merchant_id",
       });
-      Merchant.hasMany(models.Withdrawal, {
-        foreignKey: "merchant_id",
-      });
+
     }
   }
   Merchant.init({
@@ -40,10 +39,15 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         autoIncrement: true,
         type: DataTypes.INTEGER,
+        unique: true 
         },
       merchant_id: {
-        type: DataTypes.CHAR(32),
-        defaultValue: () => translator.new(),
+        type: DataTypes.UUID,
+        // defaultValue: () => translator.new(),
+        defaultValue: ()=>{
+          let uuid = uuidv4()
+          return uuid.toString().split('-').join('')
+        },
         primaryKey: true,
         allowNull: false,
       },

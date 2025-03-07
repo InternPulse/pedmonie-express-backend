@@ -19,7 +19,11 @@ async function authentication (req, res, next) {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY)
 
-        const user = await Merchant.findOne({where: {email: decoded.email}})
+        let access_token = decoded.merchant_id.split('-').join('')
+
+        // console.log('decoded', access_token)
+        const user = await Merchant.findOne({where: {merchant_id: access_token}})
+        // console.log('found', user)
         if(!user){
             return res.status(404).json({
                 status: false,

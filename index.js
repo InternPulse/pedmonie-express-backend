@@ -25,8 +25,13 @@ const { connectToDb } = require('./Testin/schema')
 
 async function connection(){
     try{
+<<<<<<< HEAD
         //await sequelize.sync()
         //console.log('Connection has been established successfully.');
+=======
+        // await sequelize.sync({alter: true});
+        console.log('Connection has been established successfully.');
+>>>>>>> a2a31e4b1727fbbc2450cc7248220b5314d336de
         app.listen(port, ()=>{
         console.log(`Server running on port ${port}`)
 })
