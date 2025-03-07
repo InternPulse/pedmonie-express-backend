@@ -25,7 +25,7 @@ module.exports = {
   initializePayment: async (req, res, next) => {
 
 
-    const { email, amount, currency_code } = req.body;
+    const { email, amount, currency_code} = req.body;
 
     
     //Valida the data parsed to the request body
