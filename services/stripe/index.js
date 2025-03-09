@@ -16,7 +16,7 @@ const shortUuid = ShortUniqueId()
 
 const initiatePayment = async (req, res) => {
   const { email, amount, currency, merchantId } = req.body
-  const currencyCode = currency.toUpperCase()
+  const countryCode = currency.toUpperCase()
   const gatewayUserTransactionId = `USR-${shortUuid.generate()}`
   const gatewayWalletTransactionId = `PTW-${shortUuid.generate()}`
   
@@ -28,7 +28,7 @@ const initiatePayment = async (req, res) => {
       merchant_id: merchantId,
       gateway_name: "Stripe",
       amount: amount,
-      currency: currencyCode,
+      currency: countryCode,
       order_status: "pending",
     }
   try {
@@ -51,7 +51,7 @@ const initiatePayment = async (req, res) => {
       line_items: [
         {
           price_data: {
-            currency: String(currencyCode),
+            currency: String(countryCode),
             product_data: {
               name: "product",
             },
@@ -86,7 +86,7 @@ const initiatePayment = async (req, res) => {
       amount: amount,
       payment_channel: "Card",
       status: "pending",
-      currency: currencyCode,
+      currency: countryCode,
     }
     await Transaction.create(savedTransaction)
 
@@ -104,7 +104,7 @@ const initiatePayment = async (req, res) => {
     await Transaction.create(userTransaction)
 
     res.status(200).json({
-      status: "success",
+      status: true,
       message: "Payment URL created",
       data: {
         url: session.url,
@@ -115,7 +115,7 @@ const initiatePayment = async (req, res) => {
     })
   } catch (error) {
     res.status(500).json({
-        status: "error", 
+        status: false, 
         message: "Internal Server Error",
         error: error.message
     })
@@ -132,18 +132,19 @@ const verifyPayment = async (req, res) => {
     const currency = session.currency
     const { merchant_id, order_id, gateway_user_id, gateway_wallet_id } = session.metadata 
 
-    const order = await Order.findOne({ where: { order_id } })
+    const order = await Order.findOne({ where: { order_id: order_id } })
+    console.log("I got here")
     if (!order) {
       await t.rollback()
       return res.status(404).json({
-        status: "failed",
+        status: false,
         message: "Order not found!",
       })
     }
     if (order.order_status === "successful") {
       await t.rollback()
       return res.status(400).json({
-        status: "failed",
+        status: false,
         message: "Order has already been paid for!",
       })
     }
@@ -158,7 +159,7 @@ const verifyPayment = async (req, res) => {
 
       if (existingTransaction) {
         return res.status(200).json({
-          status: "success",
+          status: false,
           message: "Payment already initiated but not verified!",
           existingTransaction,
         })
@@ -176,24 +177,32 @@ const verifyPayment = async (req, res) => {
       const converted = (value * convert["NGN"]).toFixed(2)
 
       // update user to escrow transaction status
-      const userTransaction = await Transaction.update(
+      await Transaction.update(
         { status: "successful" },
         {
           where: { gateway_transaction_identifier: gateway_user_id },
           transaction: t,
         }
       )
+       const userTransaction = await Transaction.findOne({
+         where: { gateway_transaction_identifier: gateway_user_id },
+         transaction: t,
+       })
       // update order status
-      const updateOrderStatus = await Order.update(
+      await Order.update(
         {
           order_status: "successful",
           amount: converted,
           currency: "NGN",
         },
-        { where: { order_id }, transaction: t } // Find the order by order_id
+        { where: { order_id: order_id }, transaction: t }
       )
+       const updateOrderStatus = await Order.findOne({
+         where: { order_id: order_id },
+         transaction: t,
+       })
       // get merchant wallet and update
-      const getWallet = await Wallet.findOne({ where: merchant_id }, { transaction: t })
+      const getWallet = await Wallet.findOne({ where: { merchant_id: merchant_id } }, { transaction: t })
       if (!getWallet) {
         return res.status(404).json({
           status: false,
@@ -205,18 +214,26 @@ const verifyPayment = async (req, res) => {
       const wallet = await getWallet.update({ amount: incrementAmount })
       
       // update transaction to wallet status
-      const walletTransaction = await Transaction.update(
-        { status: "successful",
+      await Transaction.update(
+        {
+          status: "successful",
           amount: converted,
-          currency: "NGN" },
+          currency: "NGN",
+        },
         {
           where: { gateway_transaction_identifier: gateway_wallet_id },
           transaction: t,
-        } 
+        }
       )
+      // Fetch the updated transaction details
+      const walletTransaction = await Transaction.findOne({
+        where: { gateway_transaction_identifier: gateway_wallet_id },
+        transaction: t,
+      })
+      
       await t.commit()
       return res.status(200).json({
-        status: "success",
+        status: true,
         message: "Payment verified successfully!",
         updateOrderStatus,
         userTransaction,
@@ -229,7 +246,7 @@ const verifyPayment = async (req, res) => {
   } catch (error) {
     console.error("Error verifying checkout:", error)
     return res.status(500).json({
-      status: "error",
+      status: false,
       message: "Internal server error",
       error: error.message,
     })
@@ -243,23 +260,23 @@ const cancelPayment = async (req, res) => {
     const session = await stripe.checkout.sessions.retrieve(session_id)
     const { order_id, gateway_user_id, gateway_wallet_id } = session.metadata
 
-    const order = await Order.findOne({ where: { order_id } })
+    const order = await Order.findOne({ where: { order_id: order_id } })
     if (!order) {
       await t.rollback()
       return res.status(404).json({
-        status: "failed",
+        status: false,
         message: "Order not found!",
       })
     }
     if (order.order_status === "successful") {
       return res.status(400).json({
-        status: "failed",
+        status: false,
         message: "Order has already been paid for!",
       })
     }
     if (order.order_status === "failed") {
       return res.status(400).json({
-        status: "failed",
+        status: false,
         message: "Order has already been canceled!",
       })
     }
@@ -269,7 +286,7 @@ const cancelPayment = async (req, res) => {
       {
         order_status: "failed",
       },
-      { where: { order_id }, transaction: t }
+      { where: { order_id: order_id }, transaction: t }
     )
 
     // update user transaction to escrow status
@@ -291,7 +308,7 @@ const cancelPayment = async (req, res) => {
     )
     await t.rollback()
     return res.status(200).json({
-      status: "success",
+      status: true,
       message: "Order canceled succesfully!",
       updateOrderStatus,
       userTransaction,
@@ -300,7 +317,7 @@ const cancelPayment = async (req, res) => {
   } catch (error) {
     console.error("Error cancelling checkout:", error)
     return res.status(500).json({
-      status: "error",
+      status: false,
       message: "Internal server error",
       error: error.message,
     })
