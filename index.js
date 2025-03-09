@@ -21,7 +21,6 @@ const limiter = require("./middlewares/rateLimiter");
 const port = process.env.APP_PORT || 1111;
 const app = express();
 const { sequelize } = require("./models/index");
-const { connectToDb } = require('./Testin/schema')
 
 async function connection(){
     try{
@@ -35,9 +34,6 @@ async function connection(){
     }
 } 
 connection()
-
-//stripe testing
-connectToDb()
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json({ limit: "5mb" }));
