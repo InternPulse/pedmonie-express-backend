@@ -29,12 +29,7 @@
     "sequelize": "^6.37.5",
     "short-uuid": "^5.2.0",
     "stripe": "^17.6.0",
-<<<<<<< HEAD
-    "uuid": "^11.0.5",
-    "uuidv4": "^6.2.13"
-=======
     "uuid": "^11.1.0"
->>>>>>> a2a31e4b1727fbbc2450cc7248220b5314d336de
   },
   "devDependencies": {
     "nodemon": "^3.1.9",
