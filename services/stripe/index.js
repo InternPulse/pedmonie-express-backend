@@ -1,159 +1,331 @@
 const Stripe = require("stripe")
-const { validateOrder } = require("../../validations/stripe")
-const { createUnpaidOrder, createTransaction, creditWallet, convertCurrency } = require("../../controller/stripe/index")
+const ShortUniqueId = require("short-uuid")
+
 const { sequelize } = require("../../models")
+const { validateOrder } = require("../../validations/stripe")
+const { convertCurrency } = require("../../controller/stripe/index")
+
 const Order = require('../../models/order')(sequelize, require("sequelize").DataTypes)
+const Wallet = require('../../models/wallet')(sequelize, require("sequelize").DataTypes)
+const Transaction = require('../../models/transaction')(sequelize, require("sequelize").DataTypes)
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 const successUrl = process.env.SUCCESS_URL
 const cancelUrl = process.env.CANCEL_URL
-
+const shortUuid = ShortUniqueId()
 
 const initiatePayment = async (req, res) => {
   const { email, amount, currency, merchantId } = req.body
-
+  const countryCode = currency.toUpperCase()
+  const gatewayUserTransactionId = `USR-${shortUuid.generate()}`
+  const gatewayWalletTransactionId = `PTW-${shortUuid.generate()}`
+  
   const { error } = validateOrder(req.body)
   if (error) {
       return res.status(400).json({ message: error.details[0].message })
     }
     const orderData = {
-        merchant_id: merchantId,
-        gateway_name: "",
-        amount: amount,
-        currency: currency,
-        order_status: "",
+      merchant_id: merchantId,
+      gateway_name: "Stripe",
+      amount: amount,
+      currency: countryCode,
+      order_status: "pending",
     }
-    try {
-      //Saving the details to order table
-      const order = await createUnpaidOrder(orderData)
-        
-      //a stripe checkout session to initiate payment
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        customer_email: email,
-        line_items: [
-          {
-            price_data: {
-              currency: currency.toUpperCase(),
-              product_data: {
-                name: "product",
-              },
-              unit_amount: amount * 100,
-            },
-            quantity: 1,
-          },
-        ],
-        success_url: `${successUrl}session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancelUrl,
-        metadata: {
-          merchant_id: merchantId,
-          order_id: order.order.dataValues.order_id,
-        },
-      }) 
-      // console.info(order.order.dataValues.order_id)
-      res.status(200).json({
-        status: "success",
-        message: "Payment URL created",
-        data: {
-          url: session.url,
-          session_id: session.id,
-          payment_status: session.payment_status,
-        },
-        // session,
+  try {
+    // Creating unpaid order and saving the details to Order table
+    const order = await Order.create(orderData)
+
+    if (!order) {
+      return res.status(400).json({
+        status: false,
+        message: "Error creating order!",
+        error: error.message,
       })
-    } catch (error) {
-        res.status(500).json({
-            status: "error", 
-            message: "Internal Server Error",
-            error: error.message
-        })
     }
-  
+    const orderId = order.order_id // from unpaid Order table
+
+    // a stripe checkout session to initiate payment
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer_email: email,
+      line_items: [
+        {
+          price_data: {
+            currency: String(countryCode),
+            product_data: {
+              name: "product",
+            },
+            unit_amount: String(amount * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`, // a page user gets redirected to after payment is confirmed
+      cancel_url: `${cancelUrl}?session_id={CHECKOUT_SESSION_ID}`, // another page if payment was canceled
+      metadata: {
+        gateway_user_id: gatewayUserTransactionId,
+        gateway_wallet_id: gatewayWalletTransactionId,
+        merchant_id: merchantId,
+        order_id: orderId,
+      },
+    })
+
+    if (!session) {
+      return res.status(400).json({
+        status: false,
+        message: "Error initiating payment!",
+        error: error.message,
+      })
+    }
+    // Create escrow to merchant transaction
+    const savedTransaction = {
+      order_id: orderId,
+      merchant_id: merchantId,
+      gateway_name: "Stripe",
+      gateway_transaction_identifier: gatewayWalletTransactionId,
+      amount: amount,
+      payment_channel: "Card",
+      status: "pending",
+      currency: countryCode,
+    }
+    await Transaction.create(savedTransaction)
+
+    // create user to escrow transaction
+    const userTransaction = {
+      order_id: orderId,
+      merchant_id: merchantId,
+      gateway_name: "Stripe",
+      gateway_transaction_identifier: gatewayUserTransactionId,
+      amount: amount,
+      payment_channel: "Card",
+      status: "pending",
+      currency: countryCode,
+    }
+    await Transaction.create(userTransaction)
+
+    res.status(200).json({
+      status: true,
+      message: "Payment URL created",
+      data: {
+        url: session.url,
+        session_id: session.id,
+        payment_status: session.payment_status,
+      },
+      //session,
+    })
+  } catch (error) {
+    res.status(500).json({
+        status: false, 
+        message: "Internal Server Error",
+        error: error.message
+    })
+  }
 }
+
 const verifyPayment = async (req, res) => {
   const t = await sequelize.transaction()
-  const { session_id } = req.params
+  const { session_id } = req.query
+
   try {
     const session = await stripe.checkout.sessions.retrieve(session_id)
-    const { merchant_id, order_id } = session.metadata
-   
-    const order = await Order.findOne({ where: { order_id } })
+    const value = session.amount_total / 100
+    const currency = session.currency
+    const { merchant_id, order_id, gateway_user_id, gateway_wallet_id } = session.metadata 
+
+    const order = await Order.findOne({ where: { order_id: order_id } })
+    console.log("I got here")
     if (!order) {
       await t.rollback()
       return res.status(404).json({
-        status: "failed",
+        status: false,
         message: "Order not found!",
       })
     }
-
-    if (session.payment_status == "unpaid") {
+    if (order.order_status === "successful") {
       await t.rollback()
       return res.status(400).json({
-        status: "failed",
-        message: "Payment not verified!",
+        status: false,
+        message: "Order has already been paid for!",
       })
     }
-    if (session.payment_status === "paid") {
-      const convertedAmount = await convertCurrency(
-          order.amount,
-          order.currency,
-          "NGN"
-        ) 
-        const updatedOrderStatus = async () => {
-          await order.update({ order_status: "successful" }, { transaction: t })
-          return order
-        }
-      const transactionData = {
-        order_id,
-        merchant_id,
-        gateway_name: "",
-        gateway_transaction_identifier: session_id,
-        amount: convertedAmount,
-        payment_channel: "",
-        status: "",
-        currency: "",
-      }
-      const transaction = await createTransaction(transactionData, { transaction: t, })
-      const walletData = {
-        merchant_id,
-        order_id,
-        amount: convertedAmount,
-        currency: "",
-      }
-          // Credit the wallet or create if not found
-      const wallet = await creditWallet(walletData, { transaction: t })
-      const updatedOrder = await updatedOrderStatus()
+    // manual payment verification
+    if (session.payment_status == "unpaid") {
+      // Check if a pending transaction already exists
+      const existingTransaction = await Transaction.findOne({
+        where: {
+          gateway_transaction_identifier: gateway_wallet_id,
+        },
+      })
 
+      if (existingTransaction) {
+        return res.status(200).json({
+          status: false,
+          message: "Payment already initiated but not verified!",
+          existingTransaction,
+        })
+      }
+    }
+
+    if (session.payment_status === "paid") {
+      const convert = await convertCurrency(currency)
+      if (convert == null) {
+        res.status(404).json({
+          status: false,
+          message: "An error occured!",
+        })
+      }
+      const converted = (value * convert["NGN"]).toFixed(2)
+
+      // update user to escrow transaction status
+      await Transaction.update(
+        { status: "successful" },
+        {
+          where: { gateway_transaction_identifier: gateway_user_id },
+          transaction: t,
+        }
+      )
+       const userTransaction = await Transaction.findOne({
+         where: { gateway_transaction_identifier: gateway_user_id },
+         transaction: t,
+       })
+      // update order status
+      await Order.update(
+        {
+          order_status: "successful",
+          amount: converted,
+          currency: "NGN",
+        },
+        { where: { order_id: order_id }, transaction: t }
+      )
+       const updateOrderStatus = await Order.findOne({
+         where: { order_id: order_id },
+         transaction: t,
+       })
+      // get merchant wallet and update
+      const getWallet = await Wallet.findOne({ where: { merchant_id: merchant_id } }, { transaction: t })
+      if (!getWallet) {
+        return res.status(404).json({
+          status: false,
+          message: "Wallet not found!",
+        })
+      }
+      const incrementAmount = Number(getWallet.amount) + Number(converted)
+      // update wallet
+      const wallet = await getWallet.update({ amount: incrementAmount })
+      
+      // update transaction to wallet status
+      await Transaction.update(
+        {
+          status: "successful",
+          amount: converted,
+          currency: "NGN",
+        },
+        {
+          where: { gateway_transaction_identifier: gateway_wallet_id },
+          transaction: t,
+        }
+      )
+      // Fetch the updated transaction details
+      const walletTransaction = await Transaction.findOne({
+        where: { gateway_transaction_identifier: gateway_wallet_id },
+        transaction: t,
+      })
+      
       await t.commit()
-      console.log(updatedOrder)
-      console.log("Wallet amount:", wallet.amount, typeof wallet.amount)
-      console.log("Order amount:", order.amount, typeof order.amount)
       return res.status(200).json({
-        status: "success",
+        status: true,
         message: "Payment verified successfully!",
-        order_id,
-        transaction,
+        updateOrderStatus,
+        userTransaction,
         wallet,
+        walletTransaction,
       })
     } else {
-      await t.rollback()
-
-      return res.status(400).json({
-        status: "failed",
-        message: "Payment not verified!",
-      })
+      await t.rollback() 
     }
   } catch (error) {
-        console.error("Error verifying checkout:", error)
-        return res.status(500).json({
-          status: "error",
-          message: "Internal server error",
-          error: error.message,
-        })
+    console.error("Error verifying checkout:", error)
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error",
+      error: error.message,
+    })
+  }
+}
+
+const cancelPayment = async (req, res) => {
+  const { session_id } = req.query
+
+  try {
+    const session = await stripe.checkout.sessions.retrieve(session_id)
+    const { order_id, gateway_user_id, gateway_wallet_id } = session.metadata
+
+    const order = await Order.findOne({ where: { order_id: order_id } })
+    if (!order) {
+      await t.rollback()
+      return res.status(404).json({
+        status: false,
+        message: "Order not found!",
+      })
+    }
+    if (order.order_status === "successful") {
+      return res.status(400).json({
+        status: false,
+        message: "Order has already been paid for!",
+      })
+    }
+    if (order.order_status === "failed") {
+      return res.status(400).json({
+        status: false,
+        message: "Order has already been canceled!",
+      })
+    }
+
+    // update order status
+    const updateOrderStatus = await Order.update(
+      {
+        order_status: "failed",
+      },
+      { where: { order_id: order_id }, transaction: t }
+    )
+
+    // update user transaction to escrow status
+    const userTransaction = await Transaction.update(
+      { status: "failed" },
+      {
+        where: { gateway_transaction_identifier: gateway_user_id },
+        transaction: t,
+      }
+    )
+
+    // update escrow transaction to wallet status
+    const walletTransaction = await Transaction.update(
+      { status: "failed" },
+      {
+        where: { gateway_transaction_identifier: gateway_wallet_id },
+        transaction: t,
+      }
+    )
+    await t.rollback()
+    return res.status(200).json({
+      status: true,
+      message: "Order canceled succesfully!",
+      updateOrderStatus,
+      userTransaction,
+      walletTransaction,
+    })
+  } catch (error) {
+    console.error("Error cancelling checkout:", error)
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error",
+      error: error.message,
+    })
   }
 }
 
 module.exports = {
-    initiatePayment,
-    verifyPayment
+  initiatePayment,
+  verifyPayment,
+  cancelPayment
 }
