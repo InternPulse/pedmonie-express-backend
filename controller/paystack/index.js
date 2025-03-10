@@ -183,7 +183,7 @@ const verifyPayment = async (req, res)=>{
                     merchant_id: merchant_id,
                 }
         })
-        console.log('I am wallet',getWallet)
+        // console.log('I am wallet',getWallet)
         const transactionIntoWallet = await Transaction.create({
             order_id,
             merchant_id: merchant_id,
