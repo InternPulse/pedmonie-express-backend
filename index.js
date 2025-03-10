@@ -9,6 +9,8 @@ const PaymentRouter = require('./Routes/paymentprocessing.route')
 const flutterwaveRouter = require('./Routes/flutterwave.route');
 const stripeRouter = require("./Routes/stripe.route")
 const monnifyRouter = require("./Routes/monnify.route")
+const squardRouter = require('./Routes/squad')
+
 // const Merchant = require('./models/merchants.js')
 
 
@@ -21,7 +23,6 @@ const limiter = require("./middlewares/rateLimiter");
 const port = process.env.APP_PORT || 1111;
 const app = express();
 const { sequelize } = require("./models/index");
-
 async function connection(){
     try{
         // await sequelize.sync({alter: true});
@@ -46,6 +47,11 @@ app.use("/api/v1", PaypalRouter);
 app.use("/api/v1", PaystackRouter)
 app.use('/api/v1', stripeRouter)
 app.use("/api/v1", flutterwaveRouter);
+
+
+
+app.use("/api/v1", squardRouter)
+
 app.use("/api/v1/payments", monnifyRouter);
 
 app.get("/", (req, res) => {
