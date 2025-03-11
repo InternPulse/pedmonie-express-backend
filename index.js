@@ -7,7 +7,7 @@ const PaypalRouter = require('./Routes/paypal.route')
 const PaystackRouter = require('./Routes/paystack.route')
 const PaymentRouter = require('./Routes/paymentprocessing.route')
 const flutterwaveRouter = require('./Routes/flutterwave.route');
-const stripeRouter = require("./Routes/stripe.route")
+// const stripeRouter = require("./Routes/stripe.route")
 const monnifyRouter = require("./Routes/monnify.route")
 const squardRouter = require('./Routes/squad')
 
@@ -45,7 +45,7 @@ app.use(limiter);
 app.use("/api/v1", PaymentRouter);
 app.use("/api/v1", PaypalRouter);
 app.use("/api/v1", PaystackRouter)
-app.use('/api/v1', stripeRouter)
+// app.use('/api/v1', stripeRouter)
 app.use("/api/v1", flutterwaveRouter);
 
 
