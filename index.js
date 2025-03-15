@@ -36,6 +36,22 @@ async function connection(){
 } 
 connection()
 
+const allowedOrigins = [
+    'https://localhost:5173',
+    'https://pedmonie-frontend-dev.onrender.com/',
+    'https://localhost:5174' // Example for local development
+];
+
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin); // Allow the requesting origin
+    }
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS'); // Allowed HTTP methods
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Allow specific headers
+    res.header('Access-Control-Expose-Headers', 'Authorization'); // Expose custom headers like Authorization to the frontend
+    next(); // Move to the next middleware or route handler
+});
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json({ limit: "5mb" }));
 app.use(cors());
